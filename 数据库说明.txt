@@ -1,0 +1,26 @@
+1. 用户表 users
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(50) NOT NULL,
+    balance DECIMAL(10,2) DEFAULT 0.00
+);
+2. 购物车表 cart
+CREATE TABLE cart (
+    cart_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    commodify_id INT NOT NULL,
+    quantity INT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (commodify_id) REFERENCES commodities(id)
+);
+3.商品表 commodities 
+CREATE TABLE commodities (
+    id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(50),
+    detail TEXT,
+    price DECIMAL(10,2),
+    num INT,
+    state VARCHAR(100)
+);
