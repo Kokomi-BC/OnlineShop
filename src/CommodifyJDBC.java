@@ -8,7 +8,7 @@ public class CommodifyJDBC {
     // 数据库连接信息
     private static final String JDBC_URL = "jdbc:mysql://localhost:3306/commodities";
     private static final String JDBC_USER = "root";
-    private static final String JDBC_PASSWORD = "mm050808";
+    private static final String JDBC_PASSWORD = "root";
 
     // 加载数据库驱动
     static {

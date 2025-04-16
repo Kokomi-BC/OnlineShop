@@ -7,7 +7,7 @@ import java.util.List;
 public class UserJDBC {
     private static final String JDBC_URL = "jdbc:mysql://localhost:3306/commodities";
     private static final String JDBC_USER = "root";
-    private static final String JDBC_PASSWORD = "mm050808";
+    private static final String JDBC_PASSWORD = "root";
     static {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
