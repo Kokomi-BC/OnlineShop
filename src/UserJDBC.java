@@ -1,5 +1,6 @@
 package src;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +26,7 @@ public class UserJDBC {
     public static String addUser(User user) {
         // 检查用户名是否已存在
         String checkUsernameSql = "SELECT COUNT(*) FROM users WHERE username = ?";
-        String insertSql = "INSERT INTO users (username, password, balance) VALUES (?, ?, ?)";
+        String insertSql = "INSERT INTO users (username, password, phone, address, balance, remark) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = getConnection();
              PreparedStatement checkStmt = conn.prepareStatement(checkUsernameSql);
@@ -37,15 +38,16 @@ public class UserJDBC {
             if (rs.next() && rs.getInt(1) > 0) {
                 return "用户名已存在";
             }
-
             // 2. 插入新用户（id由数据库自动生成）
             insertStmt.setString(1, user.getUsername());
             insertStmt.setString(2, user.getPassword());
-            insertStmt.setDouble(3, user.getBalance());
+            insertStmt.setString(3, user.getPhone());
+            insertStmt.setString(4, user.getAddress());
+            insertStmt.setBigDecimal(5, user.getBalance());
+            insertStmt.setString(6, user.getRemark());
 
             int affectedRows = insertStmt.executeUpdate();
             if (affectedRows > 0) {
-                // 获取自动生成的id（可选）
                 try (ResultSet generatedKeys = insertStmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         int generatedId = generatedKeys.getInt(1);
@@ -77,7 +79,12 @@ public class UserJDBC {
                         rs.getInt("id"),
                         rs.getString("username"),
                         rs.getString("password"),
-                        rs.getDouble("balance")
+                        rs.getString("phone"),
+                        rs.getString("address"),
+                        rs.getBigDecimal("balance"),
+                        rs.getString("remark"),
+                        rs.getTimestamp("createdTime"),
+                        rs.getTimestamp("modifiedTime")
                 );
             }
         } catch (SQLException e) {
@@ -101,7 +108,12 @@ public class UserJDBC {
                         rs.getInt("id"),
                         rs.getString("username"),
                         rs.getString("password"),
-                        rs.getDouble("balance")
+                        rs.getString("phone"),
+                        rs.getString("address"),
+                        rs.getBigDecimal("balance"),
+                        rs.getString("remark"),
+                        rs.getTimestamp("createdTime"),
+                        rs.getTimestamp("modifiedTime")
                 );
             }
         } catch (SQLException e) {
@@ -110,22 +122,8 @@ public class UserJDBC {
         return null;
     }
 
-    // 更新用户余额
-    public static boolean updateBalance(int userId, double newBalance) {
-        String sql = "UPDATE users SET balance = ? WHERE id = ?";
+    // 更新用户信息
 
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setDouble(1, newBalance);
-            pstmt.setInt(2, userId);
-
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
 
     // 获取所有用户
     public static List<User> getAllUsers() {
@@ -141,7 +139,12 @@ public class UserJDBC {
                         rs.getInt("id"),
                         rs.getString("username"),
                         rs.getString("password"),
-                        rs.getDouble("balance")
+                        rs.getString("phone"),
+                        rs.getString("address"),
+                        rs.getBigDecimal("balance"),
+                        rs.getString("remark"),
+                        rs.getTimestamp("createdTime"),
+                        rs.getTimestamp("modifiedTime")
                 );
                 users.add(user);
             }
