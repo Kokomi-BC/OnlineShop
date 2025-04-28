@@ -58,22 +58,23 @@ public class CommodityJDBC {
             conn.setAutoCommit(false);
             // 插入商品基本信息（使用RETURN_GENERATED_KEYS获取自增ID）
             int commodityId;
+            if (commodityExists(conn, commodity.getName())) {
+                System.out.println("警告：商品名称 '"+commodity.getName()+"' 已存在！");
+                System.out.print("是否要继续添加？(y/n): ");
+                Scanner scanner = new Scanner(System.in);
+                String choice = scanner.nextLine().trim().toLowerCase();
+                if (!choice.equals("y")) {
+                    System.out.println("用户取消添加商品");
+                    return false;
+                }
+            }
             try (PreparedStatement pstmt = conn.prepareStatement(
                     "INSERT INTO commodities (name, type, detail, production_date, manufacturer, origin, remark) " +
                             "VALUES (?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS)) {
                 setCommodityParameter(pstmt, commodity);
                 pstmt.executeUpdate();
-                if (commodityExists(conn, commodity.getName())) {
-                    System.out.println("警告：商品名称 '"+commodity.getName()+"' 已存在！");
-                    System.out.print("是否要继续添加？(y/n): ");
-                    Scanner scanner = new Scanner(System.in);
-                    String choice = scanner.nextLine().trim().toLowerCase();
-                    if (!choice.equals("y")) {
-                        System.out.println("用户取消添加商品");
-                        return false;
-                    }
-                }
+
                 try (ResultSet rs = pstmt.getGeneratedKeys()) {
                     if (rs.next()) {
                         commodityId = rs.getInt(1);
