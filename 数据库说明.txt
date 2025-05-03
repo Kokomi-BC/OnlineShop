@@ -61,7 +61,13 @@ CREATE TABLE orders (
 CREATE TABLE cart (
     cartid INT PRIMARY KEY AUTO_INCREMENT COMMENT '购物车ID',
     userid INT NOT NULL COMMENT '客户ID',
+    username VARCHAR(50) UNIQUE NOT NULL COMMENT '客户名',
     skuid INT NOT NULL COMMENT '商品SKUID',
+    name VARCHAR(100) NOT NULL COMMENT '商品名称',
+    type VARCHAR(50) COMMENT '商品类别',
+    detail TEXT COMMENT '商品详情',
+    color VARCHAR(50) COMMENT '颜色',
+    style VARCHAR(50) COMMENT '款式',
     num INT NOT NULL COMMENT '数量',
     FOREIGN KEY (userid) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (skuid) REFERENCES skus(skuid)

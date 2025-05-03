@@ -71,7 +71,6 @@ public class CartJDBC {
         try (Connection conn = getConnection()) {
             conn.setAutoCommit(false);
 
-            // 1. 锁定购物车项
             String selectSql = "SELECT cartid, num FROM cart " +
                     "WHERE userid = ? AND skuid = ? " +
                     "FOR UPDATE";
@@ -80,8 +79,6 @@ public class CartJDBC {
                 stmt.setInt(1, userId);
                 stmt.setInt(2, skuId);
                 ResultSet rs = stmt.executeQuery();
-
-                // 2. 检查是否存在购物车项
                 if (!rs.next()) {
                     throw new SQLException("购物车项不存在（用户ID: " + userId + ", SKU ID: " + skuId + "）");
                 }
@@ -115,50 +112,70 @@ public class CartJDBC {
         }
     }
 
-    // 添加商品到购物车
     public static void addItem(int userId, int skuId) throws SQLException {
-        try (Connection conn = getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement skuStmt = conn.prepareStatement("SELECT stock FROM skus WHERE skuid = ? FOR UPDATE")) {
-                skuStmt.setInt(1, skuId);
-                ResultSet rs = skuStmt.executeQuery();
-                if (!rs.next()) throw new SQLException("SKU不存在");
-                int stock = rs.getInt("stock");
-                if (stock < 1) throw new SQLException("库存不足");
+        // 查询商品信息
+        String querySql = "SELECT name, type, detail FROM commodities WHERE id = ?";
+        String querySql2 = "SELECT color, style FROM skus WHERE commodityid = ?";
+        String querySql3 = "SELECT username FROM users WHERE id = ?";
+        String insertSql = "INSERT INTO cart (userid, username, skuid, name, color, style, type, detail, num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE num=num+1";
 
-                // 检查是否已存在购物车项
-                try (PreparedStatement cartStmt = conn.prepareStatement("SELECT cartid, num FROM cart WHERE userid = ? AND skuid = ? FOR UPDATE")) {
-                    cartStmt.setInt(1, userId);
-                    cartStmt.setInt(2, skuId);
-                    ResultSet cartRs = cartStmt.executeQuery();
-                    if (cartRs.next()) {
-                        int cartId = cartRs.getInt("cartid");
-                        int currentNum = cartRs.getInt("num");
-                        if (stock < currentNum + 1) {
-                            conn.rollback();
-                            throw new SQLException("库存不足，无法添加更多");
-                        }
-                        // 增加数量
-                        try (PreparedStatement updateStmt = conn.prepareStatement("UPDATE cart SET num = num + 1 WHERE cartid = ?")) {
-                            updateStmt.setInt(1, cartId);
-                            updateStmt.executeUpdate();
-                        }
+        try (Connection conn = getConnection();
+             PreparedStatement queryStmt = conn.prepareStatement(querySql);
+             PreparedStatement queryStmt2 = conn.prepareStatement(querySql2);
+             PreparedStatement queryStmt3 = conn.prepareStatement(querySql3);
+             PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+
+            // 查询商品信息
+            queryStmt.setInt(1, skuId);
+            ResultSet rs = queryStmt.executeQuery();
+
+            if (rs.next()) {
+                String name = rs.getString("name");
+                String type = rs.getString("type");
+                String detail = rs.getString("detail");
+
+                // 查询颜色和款式信息
+                queryStmt2.setInt(1, skuId);
+                ResultSet rs2 = queryStmt2.executeQuery();
+
+                if (rs2.next()) {
+                    String color = rs2.getString("color");
+                    String style = rs2.getString("style");
+
+                    // 查询用户名
+                    queryStmt3.setInt(1, userId);
+                    ResultSet rs3 = queryStmt3.executeQuery();
+
+                    if (rs3.next()) {
+                        String username = rs3.getString("username");
+
+                        // 更新购物车信息
+                        insertStmt.setInt(1, userId);
+                        insertStmt.setString(2, username); // 设置用户名
+                        insertStmt.setInt(3, skuId);
+                        insertStmt.setString(4, name);
+                        insertStmt.setString(5, color);
+                        insertStmt.setString(6, style);
+                        insertStmt.setString(7, type);
+                        insertStmt.setString(8, detail);
+                        insertStmt.executeUpdate();
                     } else {
-                        try (PreparedStatement insertStmt = conn.prepareStatement("INSERT INTO cart (userid, skuid, num) VALUES (?, ?, 1)")) {
-                            insertStmt.setInt(1, userId);
-                            insertStmt.setInt(2, skuId);
-                            insertStmt.executeUpdate();
-                        }
+                        throw new SQLException("未找到对应的用户 ID: " + userId);
                     }
+
+                    rs3.close(); // 关闭 ResultSet
+                } else {
+                    throw new SQLException("未找到对应的 SKU ID: " + skuId);
                 }
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
+
+                rs2.close(); // 关闭 ResultSet
+            } else {
+                throw new SQLException("未找到对应的 SKU ID: " + skuId);
             }
+
+            rs.close(); // 关闭 ResultSet
         }
     }
-
     // 删除购物车商品
     public void removeItem(int cartId) throws SQLException {
         try (Connection conn = getConnection();

@@ -9,6 +9,7 @@ public class UserJDBC {
     private static final String JDBC_URL = "jdbc:mysql://localhost:3306/commodities";
     private static final String JDBC_USER = "root";
     private static final String JDBC_PASSWORD = "root";
+
     static {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -24,21 +25,18 @@ public class UserJDBC {
     }
 
     public static String addUser(User user) {
-        // 检查用户名是否已存在
         String checkUsernameSql = "SELECT COUNT(*) FROM users WHERE username = ?";
         String insertSql = "INSERT INTO users (username, password, phone, address, balance, remark) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = getConnection();
              PreparedStatement checkStmt = conn.prepareStatement(checkUsernameSql);
              PreparedStatement insertStmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
-
-            // 1. 检查用户名是否已存在
             checkStmt.setString(1, user.getUsername());
             ResultSet rs = checkStmt.executeQuery();
             if (rs.next() && rs.getInt(1) > 0) {
                 return "用户名已存在";
             }
-            // 2. 插入新用户（id由数据库自动生成）
+
             insertStmt.setString(1, user.getUsername());
             insertStmt.setString(2, user.getPassword());
             insertStmt.setString(3, user.getPhone());
@@ -51,7 +49,7 @@ public class UserJDBC {
                 try (ResultSet generatedKeys = insertStmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         int generatedId = generatedKeys.getInt(1);
-                        return "添加成功，用户ID: " + generatedId;
+                        return "添加成功，用户名"+ user.getUsername()+"用户ID: " + generatedId;
                     }
                 }
                 return "添加成功";
@@ -66,7 +64,7 @@ public class UserJDBC {
 
     // 根据用户名查询用户
     public static User getUserByUsername(String username) {
-        String sql = "SELECT * FROM users WHERE username = ?";
+        String sql = "SELECT id, username, password, phone, address, balance, remark FROM users WHERE username = ?";
 
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -82,9 +80,7 @@ public class UserJDBC {
                         rs.getString("phone"),
                         rs.getString("address"),
                         rs.getBigDecimal("balance"),
-                        rs.getString("remark"),
-                        rs.getTimestamp("createdTime"),
-                        rs.getTimestamp("modifiedTime")
+                        rs.getString("remark")
                 );
             }
         } catch (SQLException e) {
@@ -95,7 +91,7 @@ public class UserJDBC {
 
     // 根据ID查询用户
     public static User getUserById(int id) {
-        String sql = "SELECT * FROM users WHERE id = ?";
+        String sql = "SELECT id, username, password, phone, address, balance, remark FROM users WHERE id = ?";
 
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -111,9 +107,7 @@ public class UserJDBC {
                         rs.getString("phone"),
                         rs.getString("address"),
                         rs.getBigDecimal("balance"),
-                        rs.getString("remark"),
-                        rs.getTimestamp("createdTime"),
-                        rs.getTimestamp("modifiedTime")
+                        rs.getString("remark")
                 );
             }
         } catch (SQLException e) {
@@ -122,13 +116,10 @@ public class UserJDBC {
         return null;
     }
 
-    // 更新用户信息
-
-
     // 获取所有用户
     public static List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM users";
+        String sql = "SELECT id, username, password, phone, address, balance, remark FROM users";
 
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
@@ -142,9 +133,7 @@ public class UserJDBC {
                         rs.getString("phone"),
                         rs.getString("address"),
                         rs.getBigDecimal("balance"),
-                        rs.getString("remark"),
-                        rs.getTimestamp("createdTime"),
-                        rs.getTimestamp("modifiedTime")
+                        rs.getString("remark")
                 );
                 users.add(user);
             }

@@ -10,7 +10,7 @@ public static void main(String[] args) throws SQLException {
  String news =UserJDBC.addUser(new User(1,"kokomi","12345678","12345678","湖南省株洲市天元区", BigDecimal.valueOf(19999.9)));
        System.out.println(news);
        try {
-            CartJDBC.addItem(1, 2);
+            CartJDBC.addItem(1, 1);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -35,7 +35,7 @@ public static void main(String[] args) throws SQLException {
         } catch (SQLException e) {
             throw new RuntimeException("查询购物车失败: " + e.getMessage(), e);
         }
-    CartJDBC.decreaseQuantity( 1,2);
+    //CartJDBC.decreaseQuantity( 1,1);
 
 
     }

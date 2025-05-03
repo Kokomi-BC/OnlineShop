@@ -79,7 +79,7 @@ public class example {
                 )
         );
         // 测试查询功能
-        Commodity commodity = CommodityJDBC.getCommodityById(2);
+        Commodity commodity = CommodityJDBC.getCommodityById(1);
         List<Commodity> commodities = CommodityJDBC.getCommodityByName("华为Matepad");
         printCommodityList(commodities);
 

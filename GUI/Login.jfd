@@ -1,0 +1,119 @@
+JFDML JFormDesigner: "8.2.4.0.393" Java: "21.0.6" encoding: "UTF-8"
+
+new FormModel {
+	contentType: "form/swing"
+	root: new FormRoot {
+		add( new FormWindow( "javax.swing.JFrame", new FormLayoutManager( class com.jformdesigner.runtime.NullLayout ) ) {
+			name: "login"
+			"minimumSize": new java.awt.Dimension( 440, 300 )
+			"maximumSize": new java.awt.Dimension( 880, 600 )
+			"preferredSize": new java.awt.Dimension( 600, 410 )
+			"background": new java.awt.Color( 255, 255, 255, 255 )
+			"$locationPolicy": 1
+			"defaultCloseOperation": 3
+			"title": "商城"
+			"type": enum java.awt.Window$Type POPUP
+			"locationByPlatform": true
+			"focusTraversalPolicyProvider": true
+			auxiliary() {
+				"JavaCodeGenerator.variableModifiers": 1
+			}
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "label1"
+				"text": "登录"
+				"background": new java.awt.Color( 248, 247, 250, 0 )
+				"autoscrolls": true
+				"horizontalAlignment": 0
+				"font": new com.jformdesigner.model.SwingDerivedFont( null, 1, 12, false )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"x": 225
+				"y": 15
+				"width": 125
+				"height": 55
+			} )
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "label2"
+				"text": "账户"
+				"font": new java.awt.Font( "Microsoft YaHei UI", 0, 19 )
+				"horizontalAlignment": 0
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"x": 70
+				"y": 90
+				"width": 50
+				"height": 30
+			} )
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "label3"
+				"text": "密码"
+				"font": new java.awt.Font( "Microsoft YaHei UI", 0, 19 )
+				"horizontalAlignment": 0
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 50
+				"height": 35
+				"x": 70
+				"y": 170
+			} )
+			add( new FormComponent( "javax.swing.JPasswordField" ) {
+				name: "passwordField"
+				"horizontalAlignment": 2
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"x": 155
+				"y": 170
+				"width": 305
+				"height": 35
+			} )
+			add( new FormComponent( "javax.swing.JFormattedTextField" ) {
+				name: "usernameField"
+				"horizontalAlignment": 2
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"x": 155
+				"y": 90
+				"width": 305
+				"height": 35
+			} )
+			add( new FormComponent( "com.jformdesigner.designer.wrapper.HSpacer" ) {
+				name: "hSpacer1"
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"x": 0
+				"y": 30
+				"width": 225
+			} )
+			add( new FormComponent( "com.jformdesigner.designer.wrapper.HSpacer" ) {
+				name: "hSpacer2"
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 225
+				"height": 10
+				"x": 345
+				"y": 35
+			} )
+			add( new FormComponent( "javax.swing.JButton" ) {
+				name: "button1"
+				"text": "登录"
+				"foreground": new java.awt.Color( 51, 51, 51, 255 )
+				auxiliary() {
+					"JavaCodeGenerator.variableModifiers": 1
+				}
+				addEvent( new FormEvent( "java.awt.event.ActionListener", "actionPerformed", "loginin", true ) )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"x": 165
+				"y": 250
+				"width": 85
+				"height": 32
+			} )
+			add( new FormComponent( "javax.swing.JButton" ) {
+				name: "button2"
+				"text": "注册"
+				"foreground": new java.awt.Color( 51, 51, 51, 255 )
+				addEvent( new FormEvent( "java.awt.event.ActionListener", "actionPerformed", "register", true ) )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"x": 330
+				"y": 250
+				"width": 86
+				"height": 32
+			} )
+		}, new FormLayoutConstraints( null ) {
+			"location": new java.awt.Point( 150, 25 )
+			"size": new java.awt.Dimension( 575, 410 )
+		} )
+	}
+}

@@ -15,7 +15,8 @@ public class User {
     private Date createdTime;
     private Date modifiedTime;
 
-    public User() {}
+    public User(String username, String password) {  this.username = username;
+        this.password = password;}
 
 
     public User(String username, String password, String phone, String address, BigDecimal balance, String remark) {
@@ -44,6 +45,19 @@ public class User {
         this.remark = remark;
         this.createdTime=createdTime;
         this.modifiedTime=modifiedTime;
+    }
+
+    public User(int id, String username, String password, String phone, String address, BigDecimal balance, String remark) {
+        this.id=id;
+        this.username = username;
+        this.password = password;
+        this.phone = phone;
+        this.address = address;
+        this.balance = balance;
+        this.remark = remark;
+    }
+
+    public User() {
     }
 
     public int getId() {

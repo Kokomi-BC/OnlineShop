@@ -1,0 +1,157 @@
+JFDML JFormDesigner: "8.2.4.0.393" Java: "21.0.6" encoding: "UTF-8"
+
+new FormModel {
+	contentType: "form/swing"
+	root: new FormRoot {
+		add( new FormWindow( "javax.swing.JDialog", new FormLayoutManager( class com.jformdesigner.runtime.NullLayout ) ) {
+			name: "register"
+			"minimumSize": new java.awt.Dimension( 540, 460 )
+			"title": "注册"
+			"preferredSize": new java.awt.Dimension( 540, 460 )
+			"maximumSize": new java.awt.Dimension( 580, 550 )
+			auxiliary() {
+				"JavaCodeGenerator.variableModifiers": 4
+			}
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "label3"
+				"text": "账户名"
+				"font": new java.awt.Font( "Microsoft YaHei UI", 0, 18 )
+				"horizontalAlignment": 0
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 60
+				"height": 35
+				"x": 75
+				"y": 130
+			} )
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "label4"
+				"text": "密码"
+				"font": &Font0 new java.awt.Font( "Microsoft YaHei UI", 0, 19 )
+				"horizontalAlignment": 0
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 50
+				"height": 35
+				"x": 85
+				"y": 180
+			} )
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "label5"
+				"text": "电话"
+				"font": #Font0
+				"horizontalAlignment": 0
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 50
+				"height": 35
+				"x": 85
+				"y": 80
+			} )
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "label6"
+				"text": "收货地址（可选）"
+				"font": new java.awt.Font( "Microsoft YaHei UI", 0, 16 )
+				"horizontalAlignment": 0
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 145
+				"height": 60
+				"x": 10
+				"y": 270
+			} )
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "label1"
+				"text": "注册会员"
+				"background": new java.awt.Color( 248, 247, 250, 0 )
+				"autoscrolls": true
+				"horizontalAlignment": 0
+				"font": new com.jformdesigner.model.SwingDerivedFont( null, 1, 12, false )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 125
+				"height": 55
+				"x": 190
+				"y": 10
+			} )
+			add( new FormComponent( "javax.swing.JFormattedTextField" ) {
+				name: "PhoneField"
+				"horizontalAlignment": 2
+				"foreground": new java.awt.Color( 0, 0, 0, 255 )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 260
+				"height": 35
+				"x": 145
+				"y": 80
+			} )
+			add( new FormComponent( "javax.swing.JFormattedTextField" ) {
+				name: "usernameField2"
+				"horizontalAlignment": 2
+				"foreground": new java.awt.Color( 0, 0, 0, 255 )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 260
+				"height": 35
+				"x": 145
+				"y": 130
+			} )
+			add( new FormComponent( "javax.swing.JFormattedTextField" ) {
+				name: "textField"
+				"horizontalAlignment": 2
+				"foreground": new java.awt.Color( 0, 0, 0, 255 )
+				auxiliary() {
+					"JavaCodeGenerator.variableModifiers": 4
+				}
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 260
+				"height": 35
+				"x": 145
+				"y": 285
+			} )
+			add( new FormComponent( "javax.swing.JPasswordField" ) {
+				name: "passwordField"
+				"horizontalAlignment": 2
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 260
+				"height": 35
+				"x": 145
+				"y": 180
+			} )
+			add( new FormComponent( "javax.swing.JButton" ) {
+				name: "ok"
+				"text": "确定"
+				"foreground": new java.awt.Color( 0, 0, 0, 255 )
+				addEvent( new FormEvent( "java.awt.event.ActionListener", "actionPerformed", "ok", true ) )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"x": 145
+				"y": 345
+			} )
+			add( new FormComponent( "javax.swing.JButton" ) {
+				name: "cancel"
+				"text": "取消"
+				"foreground": new java.awt.Color( 0, 0, 0, 255 )
+				addEvent( new FormEvent( "java.awt.event.ActionListener", "actionPerformed", "cancel", true ) )
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"x": 295
+				"y": 345
+			} )
+			add( new FormComponent( "javax.swing.JPasswordField" ) {
+				name: "passwordField2"
+				"horizontalAlignment": 2
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 260
+				"height": 35
+				"x": 145
+				"y": 235
+			} )
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "label7"
+				"text": "确认密码"
+				"font": #Font0
+				"horizontalAlignment": 0
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 100
+				"height": 35
+				"x": 35
+				"y": 235
+			} )
+		}, new FormLayoutConstraints( null ) {
+			"location": new java.awt.Point( 115, 0 )
+			"size": new java.awt.Dimension( 495, 450 )
+		} )
+	}
+}
