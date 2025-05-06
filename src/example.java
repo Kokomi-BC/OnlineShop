@@ -44,30 +44,13 @@ public class example {
         }
     }
     public static void main(String[] args) {
-        // 添加示例商品（修正参数顺序问题）
-      /*  CommodityJDBC.addCommodityWithSKUs(
-                new Commodity(
-                        4,
-                        "华为Matepad11",
-                        "数码产品",
-                        "旗舰平板",
-                        Date.valueOf("2023-09-16"),
-                        "华为技术有限公司",
-                        "中国深圳",
-                        "卫星通信"
-                ),
-                List.of(
-                        // 构造函数参数顺序为：color, style, stock, price
-                        new CommoditySKU("银色色", "16+512G", 500, 3999.00)
-                )
-        );*/
 
 
         CommodityJDBC.addCommodity(
                 new Commodity(
-                        "华为Matepad11",
+                        "华为Mate70",
                         "数码产品",
-                        "旗舰平板",
+                        "旗舰手机",
                         Date.valueOf("2023-09-16"),
                         "华为技术有限公司",
                         "中国深圳",
@@ -75,12 +58,12 @@ public class example {
                 ),
                 List.of(
                         // 构造函数参数顺序为：color, style, stock, price
-                        new CommoditySKU("银色", "16+512G", 500, 3999.00)
+                        new CommoditySKU("黑色", "16+512G", 500, 7999.00)
                 )
         );
         // 测试查询功能
         Commodity commodity = CommodityJDBC.getCommodityById(1);
-        List<Commodity> commodities = CommodityJDBC.getCommodityByName("华为Matepad");
+        List<Commodity> commodities = CommodityJDBC.getCommodityByName("华为");
         printCommodityList(commodities);
 
         // 安全打印商品详情

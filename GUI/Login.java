@@ -10,6 +10,9 @@ public class Login extends JFrame {
 
     public static void main(String[] args) {
         FlatMTMaterialLighterIJTheme.setup();
+        UIManager.put("Button.arc", 20); // 圆角按钮
+        UIManager.put("Component.arc", 20); // 圆角组件
+        UIManager.put("TextComponent.arc", 10); // 文本框圆角
         Login loginFrame = new Login();
     }
     public Login() {
@@ -17,25 +20,50 @@ public class Login extends JFrame {
         login.setVisible(true);
     }
 
-    private void onLoginSuccess() {
+    private void onLoginSuccess(User user) {
         System.out.println("登录成功，跳转到主界面");
-        // 示例：打开新窗口或关闭当前窗口
+        login.dispose();
+        Mainview mainview = new Mainview(user);
+        mainview.setVisible(true);
     }
 
     private void loginin(ActionEvent e) {
         String username = usernameField.getText();
         String password = new String(passwordField.getPassword());
+        
+        // 检查用户名和密码是否为空
         if (username.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(Login.this, "用户名或密码不能为空", "错误", JOptionPane.ERROR_MESSAGE);
             return;
         }
+        
+        // 通过用户名从数据库中获取用户信息
         User user = UserJDBC.getUserByUsername(username);
+        
+        // 验证用户是否存在以及密码是否正确
         if (user != null && user.getPassword().equals(password)) {
-            JOptionPane.showMessageDialog(Login.this, "登录成功", "成功", JOptionPane.INFORMATION_MESSAGE);
-            onLoginSuccess();
+            // 检查用户的权限
+            if ("admin".equals(user.getPermission())) {
+                // 管理员登录逻辑
+                JOptionPane.showMessageDialog(Login.this, "管理员登录成功", "成功", JOptionPane.INFORMATION_MESSAGE);
+                onAdminLoginSuccess(user); // 调用管理员登录成功的处理方法
+            } else {
+                // 普通用户登录逻辑
+                JOptionPane.showMessageDialog(Login.this, "登录成功", "成功", JOptionPane.INFORMATION_MESSAGE);
+                onLoginSuccess(user); // 调用普通用户登录成功的处理方法
+            }
         } else {
+            // 登录失败提示
             JOptionPane.showMessageDialog(Login.this, "用户名或密码错误", "错误", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    // 新增管理员登录成功后的处理方法
+    private void onAdminLoginSuccess(User user) {
+        System.out.println("管理员登录成功，跳转到管理界面");
+        login.dispose();
+        Mainview mainview = new Mainview(user);
+        mainview.setVisible(true);
     }
 
     private void register(ActionEvent e) {
@@ -69,7 +97,7 @@ public class Login extends JFrame {
 
         //======== login ========
         {
-            login.setMinimumSize(new Dimension(440, 300));
+            login.setMinimumSize(new Dimension(600, 410));
             login.setMaximumSize(new Dimension(880, 600));
             login.setPreferredSize(new Dimension(600, 410));
             login.setBackground(Color.white);

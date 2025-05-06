@@ -12,13 +12,20 @@ public class User {
     private String address;
     private BigDecimal balance;
     private String remark;
+    private String permission;
     private Date createdTime;
     private Date modifiedTime;
 
-    public User(String username, String password) {  this.username = username;
-        this.password = password;}
 
-
+    public String getFieldValue(String fieldName) {
+        return switch (fieldName) {
+            case "username" -> getUsername();
+            case "phone" -> getPhone();
+            case "address" -> getAddress();
+            case "remark" -> getRemark();
+            default -> "";
+        };
+    }
     public User(String username, String password, String phone, String address, BigDecimal balance, String remark) {
         this.username = username;
         this.password = password;
@@ -35,7 +42,7 @@ public class User {
         this.address = address;
         this.balance = balance;
     }
-    public User(int id, String username, String password, String phone, String address, BigDecimal balance, String remark, Timestamp createdTime, Timestamp modifiedTime) {
+    public User(int id, String username, String password, String phone, String address, BigDecimal balance, String remark,String permission, Timestamp createdTime, Timestamp modifiedTime) {
         this.id=id;
         this.username = username;
         this.password = password;
@@ -43,6 +50,7 @@ public class User {
         this.address = address;
         this.balance = balance;
         this.remark = remark;
+        this.permission=permission;
         this.createdTime=createdTime;
         this.modifiedTime=modifiedTime;
     }
@@ -146,5 +154,13 @@ public class User {
                 ", createdTime=" + createdTime +
                 ", modifiedTime=" + modifiedTime +
                 '}';
+    }
+
+    public String getPermission() {
+        return permission;
+    }
+
+    public void setPermission(String permission) {
+        this.permission = permission;
     }
 }

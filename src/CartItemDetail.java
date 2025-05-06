@@ -10,11 +10,30 @@ public class CartItemDetail {
     private BigDecimal totalPrice;
     private String productName;
     private String style;
+    private String color;
     private String manufacturer;
+    private CommoditySKU cachedSku;
+    private Commodity cachedCommodity;
+
+    public CommoditySKU getCachedSku() {
+        return cachedSku;
+    }
+
+    public void setCachedSku(CommoditySKU cachedSku) {
+        this.cachedSku = cachedSku;
+    }
+
+    public Commodity getCachedCommodity() {
+        return cachedCommodity;
+    }
+
+    public void setCachedCommodity(Commodity cachedCommodity) {
+        this.cachedCommodity = cachedCommodity;
+    }
 
     public CartItemDetail(int cartId, int userId, int skuId, int quantity,int stock,
                           BigDecimal price, String productName,
-                          String style, String manufacturer) {
+                          String style, String color, String manufacturer) {
         this.cartId = cartId;
         this.userId = userId;
         this.skuId = skuId;
@@ -24,6 +43,7 @@ public class CartItemDetail {
         this.totalPrice = price.multiply(BigDecimal.valueOf(quantity));
         this.productName = productName;
         this.style = style;
+        this.color =color;
         this.manufacturer = manufacturer;
     }
 
@@ -64,6 +84,23 @@ public class CartItemDetail {
     }
 
     public int getStock() {
-        return stock;
+        return 0;
+    }
+
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public BigDecimal gettotalPrice() {
+        return totalPrice;
+    }
+
+    public void settotalPrice(BigDecimal totalPrice) {
+        this.totalPrice = totalPrice;
     }
 }

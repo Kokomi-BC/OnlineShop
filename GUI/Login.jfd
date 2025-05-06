@@ -5,7 +5,7 @@ new FormModel {
 	root: new FormRoot {
 		add( new FormWindow( "javax.swing.JFrame", new FormLayoutManager( class com.jformdesigner.runtime.NullLayout ) ) {
 			name: "login"
-			"minimumSize": new java.awt.Dimension( 440, 300 )
+			"minimumSize": new java.awt.Dimension( 600, 410 )
 			"maximumSize": new java.awt.Dimension( 880, 600 )
 			"preferredSize": new java.awt.Dimension( 600, 410 )
 			"background": new java.awt.Color( 255, 255, 255, 255 )

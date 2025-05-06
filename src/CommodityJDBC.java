@@ -65,6 +65,7 @@ public class CommodityJDBC {
                 String choice = scanner.nextLine().trim().toLowerCase();
                 if (!choice.equals("y")) {
                     System.out.println("用户取消添加商品");
+
                     return false;
                 }
             }
@@ -205,7 +206,7 @@ public class CommodityJDBC {
                 if (rs.getObject("skuid") != null) {
                     CommoditySKU sku = new CommoditySKU();
                     sku.setSkuId(rs.getInt("skuid"));
-                    sku.setCommodityid(rs.getInt("commodityid"));  // 注意方法名使用驼峰命名
+                    sku.setCommodityid(rs.getInt("commodityid"));
                     sku.setColor(rs.getString("color"));
                     sku.setStyle(rs.getString("style"));
                     sku.setPrice(rs.getDouble("price"));
@@ -215,20 +216,77 @@ public class CommodityJDBC {
                     }
                 }
             }
-
             // 改为控制台输出代替抛异常
             if (commodity == null) {
                 System.out.println("查询失败：未找到ID为 " + id + " 的商品");
                 return null;  // 明确返回null
             }
-
             commodity.setSkus(skus);
             return commodity;
-
         } catch (SQLException e) {
             handleSQLException(e);
             return null;  // 数据库异常也返回null
         }
+    }
+    public static CommoditySKU getCommoditySKUById(int skuId) {
+        String sql = "SELECT skuid, commodityid, color, style, price, stock " +
+                "FROM skus WHERE skuid = ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            // 设置查询参数
+            pstmt.setInt(1, skuId);
+            ResultSet rs = pstmt.executeQuery();
+
+            // 处理查询结果
+            if (rs.next()) {
+                CommoditySKU sku = new CommoditySKU();
+                // 映射基础字段
+                sku.setSkuId(rs.getInt("skuid"));
+                sku.setCommodityid(rs.getInt("commodityid"));
+                sku.setColor(rs.getString("color"));
+                sku.setStyle(rs.getString("style"));
+                sku.setPrice(rs.getDouble("price"));
+                sku.setStock(rs.getInt("stock"));
+
+                if (rs.next()) {
+                    System.err.println("警告：发现重复SKUID记录: " + skuId);
+                }
+                return sku;
+            } else {
+                System.out.println("未找到SKUID为 " + skuId + " 的记录");
+                return null;
+            }
+        } catch (SQLException e) {
+            handleSQLException(e);
+            return null;
+        }
+    }// 从数据库获取 SKU 信息
+    public static List<CommoditySKU> getCommodityskuByName(String name) {
+        String sql = "SELECT skuid, commodityid, color, style, price, stock FROM skus WHERE commodityid IN " +
+                "(SELECT id FROM commodities WHERE name = ?)";
+        List<CommoditySKU> skus = new ArrayList<>();
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    CommoditySKU sku = new CommoditySKU();
+                    sku.setSkuId(rs.getInt("skuid"));
+                    sku.setCommodityid(rs.getInt("commodityid"));
+                    sku.setColor(rs.getString("color"));
+                    sku.setStyle(rs.getString("style"));
+                    sku.setPrice(rs.getDouble("price"));
+                    sku.setStock(rs.getInt("stock"));
+                    skus.add(sku);
+                }
+            }
+        } catch (SQLException e) {
+            handleSQLException(e);
+        }
+
+        return skus;
     }
     public static List<Commodity> getCommodityByName(String name) {
         String sql = "SELECT c.*, cs.skuid, cs.commodityid, cs.color, cs.style, cs.price, cs.stock " +
