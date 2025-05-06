@@ -38,26 +38,6 @@ CREATE TABLE skus (
         ON UPDATE CASCADE
 ) COMMENT '商品SKU表';
 
--- 订单表
-CREATE TABLE orders (
-    orderid INT PRIMARY KEY AUTO_INCREMENT COMMENT '订单ID',
-    userid INT NOT NULL COMMENT '客户ID',
-    skuid INT NOT NULL COMMENT '商品SKUID',
-    quantity INT NOT NULL CHECK (quantity > 0) COMMENT '数量',
-    price DECIMAL(10,2) NOT NULL COMMENT '下单时单价',
-    total_amount DECIMAL(10,2) NOT NULL COMMENT '订单总金额',
-    status ENUM('待支付', '已支付', '已发货', '已完成', '已取消') NOT NULL DEFAULT '待支付' COMMENT '订单状态',
-    shipping_address VARCHAR(200) NOT NULL COMMENT '收货地址',
-    payment_method VARCHAR(50) COMMENT '支付方式',
-    created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '下单时间',
-    payment_time DATETIME COMMENT '支付时间',
-    shipped_time DATETIME COMMENT '发货时间',
-    completed_time DATETIME COMMENT '完成时间',
-    remark TEXT COMMENT '备注',
-    FOREIGN KEY (userid) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (skuid) REFERENCES skus(skuid) ON DELETE RESTRICT
-) COMMENT '订单表';
-
 -- 购物车表
 CREATE TABLE cart (
     cartid INT AUTO_INCREMENT COMMENT '购物车ID',
@@ -76,3 +56,63 @@ CREATE TABLE cart (
     FOREIGN KEY (userid) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (skuid) REFERENCES skus(skuid)
 ) COMMENT '购物车表';
+
+-- 订单主表
+CREATE TABLE orders (
+    orderid INT PRIMARY KEY AUTO_INCREMENT COMMENT '订单ID',
+    userid INT NOT NULL COMMENT '客户ID',
+    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '订单总金额',
+    status ENUM('待支付', '已支付', '已发货', '已完成', '已取消') NOT NULL DEFAULT '待支付' COMMENT '订单状态',
+    shipping_address VARCHAR(200) NOT NULL COMMENT '收货地址',
+    payment_method VARCHAR(50) COMMENT '支付方式',
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '下单时间',
+    payment_time DATETIME COMMENT '支付时间',
+    shipped_time DATETIME COMMENT '发货时间',
+    completed_time DATETIME COMMENT '完成时间',
+    remark TEXT COMMENT '备注',
+    FOREIGN KEY (userid) REFERENCES users(id) ON DELETE CASCADE
+) COMMENT '订单主表';
+
+-- 订单明细表
+CREATE TABLE order_details (
+    detail_id INT PRIMARY KEY AUTO_INCREMENT COMMENT '明细ID',
+    orderid INT NOT NULL COMMENT '订单ID',
+    skuid INT NOT NULL COMMENT '商品SKUID',
+    quantity INT NOT NULL CHECK (quantity > 0) COMMENT '数量',
+    price DECIMAL(10,2) NOT NULL COMMENT '下单时单价',
+    FOREIGN KEY (orderid) REFERENCES orders(orderid) ON DELETE CASCADE
+) COMMENT '订单明细表';
+
+-- 创建触发器维护总金额一致性
+DELIMITER //
+
+CREATE TRIGGER update_total_after_insert
+AFTER INSERT ON order_details
+FOR EACH ROW
+BEGIN
+    UPDATE orders 
+    SET total_amount = total_amount + NEW.quantity * NEW.price
+    WHERE orderid = NEW.orderid;
+END//
+
+CREATE TRIGGER update_total_after_delete
+AFTER DELETE ON order_details
+FOR EACH ROW
+BEGIN
+    UPDATE orders 
+    SET total_amount = total_amount - OLD.quantity * OLD.price
+    WHERE orderid = OLD.orderid;
+END//
+
+CREATE TRIGGER update_total_after_update
+AFTER UPDATE ON order_details
+FOR EACH ROW
+BEGIN
+    DECLARE diff DECIMAL(10,2);
+    SET diff = (NEW.quantity * NEW.price) - (OLD.quantity * OLD.price);
+    UPDATE orders 
+    SET total_amount = total_amount + diff
+    WHERE orderid = NEW.orderid;
+END//
+
+DELIMITER ;

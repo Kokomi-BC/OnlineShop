@@ -1,7 +1,11 @@
 package GUI;
+
 import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialLighterIJTheme;
 import src.*;
+
 import javax.swing.*;
+import javax.swing.border.AbstractBorder;
+import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
@@ -13,8 +17,8 @@ import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+
 import static src.CartJDBC.deleteCartItem;
 
 public class Mainview extends JFrame {
@@ -30,7 +34,7 @@ public class Mainview extends JFrame {
     public Mainview(User user) {
         this.currentUser = user; // 保存当前登录用户
         setTitle("购物应用");
-        setSize(800, 600);
+        setSize(800, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         cardLayout = new CardLayout();
@@ -46,9 +50,6 @@ public class Mainview extends JFrame {
     private JPanel createNavigationPanel() {
         JPanel navPanel = new JPanel(new BorderLayout());
         navPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        JLabel logoLabel = new JLabel("电商平台", SwingConstants.LEFT);
-        logoLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
-        logoLabel.setForeground(new Color(0, 120, 215));
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         String[] buttons = {"商品列表", "购物车", "个人中心"};
         for (String text : buttons) {
@@ -73,7 +74,6 @@ public class Mainview extends JFrame {
             });
             buttonPanel.add(btn);
         }
-        navPanel.add(logoLabel, BorderLayout.WEST);
         navPanel.add(buttonPanel, BorderLayout.CENTER);
         return navPanel;
     }
@@ -84,49 +84,55 @@ public class Mainview extends JFrame {
     private JLabel searchStatusLabel;
 
     private JPanel createProductListPanel() {
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        UIManager.put("Component.arc",4);  // 统一组件圆角
+        JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
         // 顶部搜索区域
-        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
-        topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0)); // 底部增加间距
-
-        // 标题与搜索框组合
-        JPanel titleSearchPanel = new JPanel(new BorderLayout(15, 0));
-        titleSearchPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
-
-        // 标题样式优化
-        JLabel titleLabel = new JLabel("商品列表");
-        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 18));
-        titleLabel.setForeground(new Color(51, 51, 51));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 5, 8, 0));
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        // 标题与搜索框组合 - 使用FlatLaf边框
+        JPanel titleSearchPanel = new JPanel(new BorderLayout(10, 0));
+        titleSearchPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, UIManager.getColor("Component.borderColor")),
+                BorderFactory.createEmptyBorder(0, 0, 5, 0)
+        ));
+        JLabel titleLabel = new JLabel("Shop");
+        titleLabel.setFont(UIManager.getFont("h1.font"));  // 使用预定义标题字体
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 3, 0));
         titleSearchPanel.add(titleLabel, BorderLayout.WEST);
-
-        // 带图标的搜索框
+        // 搜索框使用FlatLaf特性
         JPanel searchBoxPanel = new JPanel(new BorderLayout());
-        searchField = createSearchField();
+        searchField = new JTextField();
+        searchField.putClientProperty("JTextField.placeholderText", "输入商品名称搜索...");
+        searchField.putClientProperty("JTextField.showClearButton", true);  // 显示清空按钮
+        searchField.putClientProperty("JComponent.roundRect", true);  // 圆角样式
         searchBoxPanel.add(searchField, BorderLayout.CENTER);
-        // 搜索图标
-        JLabel searchIcon = new JLabel(new ImageIcon("search_icon.png")); // 替换实际图标路径
-        searchIcon.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        // 使用FlatLaf图标代替Emoji
+        JButton searchIcon = new JButton(UIManager.getIcon("Component.searchIcon"));
+        searchIcon.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        searchIcon.setBorder(BorderFactory.createEmptyBorder());
+        searchIcon.setContentAreaFilled(false);
         searchBoxPanel.add(searchIcon, BorderLayout.EAST);
+
         titleSearchPanel.add(searchBoxPanel, BorderLayout.CENTER);
         topPanel.add(titleSearchPanel, BorderLayout.NORTH);
-        // 搜索状态提示
+        // 搜索状态标签使用次要文本颜色
         searchStatusLabel = new JLabel("", SwingConstants.CENTER);
-        searchStatusLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        searchStatusLabel.setForeground(new Color(153, 153, 153));
-        searchStatusLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        searchStatusLabel.setFont(UIManager.getFont("defaultFont"));
+        searchStatusLabel.setForeground(UIManager.getColor("Component.secondaryForeground"));
+        searchStatusLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         topPanel.add(searchStatusLabel, BorderLayout.CENTER);
         mainPanel.add(topPanel, BorderLayout.NORTH);
         // 商品列表容器
         productItemsPanel = new JPanel();
         productItemsPanel.setLayout(new BoxLayout(productItemsPanel, BoxLayout.Y_AXIS));
+        productItemsPanel.setOpaque(false);
         // 滚动面板优化
         JScrollPane scrollPane = new JScrollPane(productItemsPanel);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.getViewport().setBackground(UIManager.getColor("Panel.background"));
+        scrollPane.putClientProperty("JScrollPane.smoothScrolling", true);  // 启用平滑滚动
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         setupSearchListener();
         performSearch("");
@@ -135,7 +141,7 @@ public class Mainview extends JFrame {
 
     // 配置搜索监听器
     private void setupSearchListener() {
-        searchTimer = new Timer(300, e -> {
+        searchTimer = new Timer(500, e -> {
             String keyword = searchField.getText().trim();
             performSearch(keyword);
         });
@@ -161,8 +167,6 @@ public class Mainview extends JFrame {
         ));
         field.setForeground(new Color(51, 51, 51));
         field.putClientProperty("JTextField.placeholderText", "输入商品名称搜索..."); // Java 11+ 支持
-
-        // 自定义焦点效果
         field.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
@@ -187,14 +191,14 @@ public class Mainview extends JFrame {
         new SwingWorker<List<Commodity>, Void>() {
             @Override
             protected List<Commodity> doInBackground() throws SQLException {
-                return CommodityJDBC.getCommodityByName(keyword);
+                return CommodityJDBC.searchCommodities(keyword);
             }
             @Override
             protected void done() {
                 try {
                     List<Commodity> commodities = get();
                     if (commodities.isEmpty()) {
-                        showSearchStatus("未找到名称包含 \"" + keyword + "\" 的商品", new Color(255, 59, 48));
+                        showSearchStatus("未找到名称包含 \"" + keyword + "\" 的商品", new Color(15, 152, 197));
                     } else {
                         searchStatusLabel.setText(""); // 清空状态提示
                     }
@@ -213,110 +217,152 @@ public class Mainview extends JFrame {
             searchStatusLabel.setForeground(color);
         });
     }
+    private JPanel createEmptyPanel() {
+        JPanel emptyPanel = new JPanel(new BorderLayout());
+        emptyPanel.setBorder(BorderFactory.createEmptyBorder(50, 0, 0, 0));
+        String message = "<html><div style='text-align:center;'>"
+                + "<p style='font-size:16px; color:#666; margin-bottom:8px;'>没有找到相关商品</p>"
+                + "<p style='font-size:13px; color:#999;'>尝试其他关键词或浏览其他分类</p></div></html>";
+        emptyPanel.add(new JLabel(message, SwingConstants.CENTER), BorderLayout.CENTER);
+        return emptyPanel;
+    }
 
     private void refreshProductItems(List<Commodity> commodities) {
         productItemsPanel.removeAll();
         if (commodities.isEmpty()) {
-            // 空状态提示面板
-            JPanel emptyPanel = new JPanel(new BorderLayout());
-            emptyPanel.setBorder(BorderFactory.createEmptyBorder(50, 0, 0, 0));
-
-            JLabel emptyLabel = new JLabel(
-                    "<html><div style='text-align:center;'>"
-                            + "<p style='font-size:16px; color:#666; margin-bottom:8px;'>没有找到相关商品</p>"
-                            + "<p style='font-size:13px; color:#999;'>尝试其他关键词或浏览其他分类</p>"
-                            + "</div></html>",
-                    SwingConstants.CENTER
-            );
-            emptyPanel.add(emptyLabel, BorderLayout.CENTER);
+            JPanel emptyPanel = createEmptyPanel();
             productItemsPanel.add(emptyPanel);
         } else {
-            for (Commodity commodity : commodities) {
+            commodities.forEach(commodity -> {
                 JPanel itemPanel = createItemPanel(commodity);
                 productItemsPanel.add(itemPanel);
                 productItemsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-            }
+            });
         }
         productItemsPanel.revalidate();
         productItemsPanel.repaint();
     }
     private JPanel createItemPanel(Commodity commodity) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout(10, 5));
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.LIGHT_GRAY),
-                BorderFactory.createEmptyBorder(10, 15, 10, 15)
-        ));
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120)); // 固定高度
+        JPanel panel = new JPanel(new BorderLayout(10, 5)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
+                g2.dispose();
+            }
+        };
+        panel.setOpaque(true);
+        panel.setBorder(createItemBorder(UIManager.getColor("Component.borderColor")));
+        panel.setBackground(UIManager.getColor("Panel.background"));
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
+
+        Color secondaryColor = getSafeColor("Component.secondaryForeground");
+        String details = String.format("<html><div style='margin-top:3px; color:%s;'>类型：%s | 生产商：%s<br>生产日期：%s | 产地：%s</div></html>",
+                colorToHex(secondaryColor), commodity.getType(), commodity.getManufacturer(),
+                new SimpleDateFormat("yyyy-MM-dd").format(commodity.getProductionDate()), commodity.getOrigin());
+
         JLabel nameLabel = new JLabel(commodity.getName());
-        nameLabel.setFont(new Font("微软雅黑", Font.BOLD, 18));
-        String details = String.format("<html>"
-                        + "<div style='color:#666; margin-top:5px;'>"
-                        + "类型：%s | 生产商：%s<br>"
-                        + "生产日期：%s | 产地：%s"
-                        + "</div></html>",
-                commodity.getType(),
-                commodity.getManufacturer(),
-                new SimpleDateFormat("yyyy-MM-dd").format(commodity.getProductionDate()),
-                commodity.getOrigin()
-        );
-        setupHoverEffect(panel);
-        JLabel detailLabel = new JLabel(details);
-        detailLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        nameLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        nameLabel.setForeground(UIManager.getColor("Component.foreground"));
+
+        JPanel leftPanel = new JPanel(new BorderLayout(5, 5));
+        leftPanel.setOpaque(false);
+        leftPanel.add(nameLabel, BorderLayout.NORTH);
+        leftPanel.add(new JLabel(details), BorderLayout.CENTER);
+
+        panel.add(leftPanel);
         panel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 showProductDetails(commodity.getName());
             }
         });
-        JPanel leftPanel = new JPanel(new BorderLayout(5, 5));
-        leftPanel.add(nameLabel, BorderLayout.NORTH);
-        leftPanel.add(detailLabel, BorderLayout.CENTER);
-        panel.add(leftPanel, BorderLayout.CENTER);
+        setupHoverEffect(panel);
         return panel;
     }
+    private static String colorToHex(Color color) {
+        if (color == null) {
+            return "#000000";
+        }
+        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
+    }
+    private Color getSafeColor(String key) {
+        Color color = UIManager.getColor(key);
+        if (color == null) {
+            return UIManager.getColor("Label.foreground"); // 使用基础前景色作为后备
+        }
+        return color;
+    }
+    static class RoundedBorder extends AbstractBorder {
+        private final Color color;
+        private final int radius;
+        public RoundedBorder(Color color, int radius) {
+            this.color = color;
+            this.radius = radius;
+        }
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.drawRoundRect(x, y, width - 1, height - 1, radius * 2, radius * 2);
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(radius, radius, radius, radius);
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c, Insets insets) {
+            insets.left = insets.right = insets.top = insets.bottom = radius;
+            return insets;
+        }
+    }
+    private Border createItemBorder(Color color) {
+        return BorderFactory.createCompoundBorder(
+                new RoundedBorder(color, 8),
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        );
+    }
     private void setupHoverEffect(JPanel panel) {
-        Color defaultBg = Color.WHITE;
-        Color hoverBg = new Color(245, 251, 255); // 浅蓝色背景
-        Color borderColor = new Color(52, 190, 232);
-        panel.setBackground(defaultBg);
-        panel.setOpaque(true);
+        Color defaultBg = UIManager.getColor("Panel.background");
+        Color hoverBg = UIManager.getColor("Component.hoverBackground");
+        Color pressedBg = UIManager.getColor("Component.pressedBackground");
+        Color borderColor = UIManager.getColor("Component.focusColor");
+        Border defaultBorder = createItemBorder(UIManager.getColor("Component.borderColor"));
+        Border hoverBorder = createItemBorder(borderColor);
+        Border pressedBorder = createItemBorder(borderColor.darker());
+
         panel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                panel.setBackground(hoverBg);
-                panel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(1, 1, 2, 1, borderColor),
-                        BorderFactory.createEmptyBorder(10, 15, 10, 15)
-                ));
-                panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                applyHoverStyle(panel, hoverBg, hoverBorder, Cursor.HAND_CURSOR);
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                panel.setBackground(defaultBg);
-                panel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(Color.LIGHT_GRAY),
-                        BorderFactory.createEmptyBorder(10, 15, 10, 15)
-                ));
+                applyHoverStyle(panel, defaultBg, defaultBorder, Cursor.DEFAULT_CURSOR);
             }
 
             @Override
             public void mousePressed(MouseEvent e) {
-                panel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(1, 1, 2, 1, borderColor.darker()),
-                        BorderFactory.createEmptyBorder(10, 15, 10, 15)
-                ));
+                applyHoverStyle(panel, pressedBg, pressedBorder, Cursor.HAND_CURSOR);
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                panel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(1, 1, 2, 1, borderColor),
-                        BorderFactory.createEmptyBorder(10, 15, 10, 15)
-                ));
+                applyHoverStyle(panel, hoverBg, hoverBorder, Cursor.HAND_CURSOR);
             }
         });
+    }
+    private void applyHoverStyle(JPanel panel, Color bgColor, Border border, int cursorType) {
+        panel.setBackground(bgColor);
+        panel.setBorder(border);
+        panel.setCursor(Cursor.getPredefinedCursor(cursorType));
     }
     private void showProductDetails(String productName) {
         int productId = getProductIdByName(productName);
@@ -418,7 +464,7 @@ public class Mainview extends JFrame {
         }
     }
     private int getProductIdByName(String productName) {
-        List<Commodity> commodities = CommodityJDBC.getCommodityByName(productName);
+        List<Commodity> commodities = CommodityJDBC.searchCommodities(productName);
         if (commodities != null && !commodities.isEmpty()) {
             return commodities.get(0).getId(); // 返回第一个商品的ID
         } else {
@@ -506,12 +552,8 @@ public class Mainview extends JFrame {
         JButton deleteButton = new JButton("×");
         deleteButton.setPreferredSize(new Dimension(30, 20));
         deleteButton.addActionListener(e -> removeCartItem(item.getCartId()));
-
-        // 数量控制组件
         JPanel quantityPanel = new JPanel();
         quantityPanel.setLayout(new BoxLayout(quantityPanel, BoxLayout.X_AXIS));
-
-        // 减少按钮
         JButton minusButton = new JButton("-");
         minusButton.setMargin(new Insets(0, 4, 0, 4));
         minusButton.addActionListener(e -> {
@@ -549,23 +591,18 @@ public class Mainview extends JFrame {
         return panel;
     }
 
-    // 商品信息显示构建
     private String buildDisplayContent(Commodity commodity, CommoditySKU sku) {
         if (commodity == null || sku == null) {
             return "<html><div style='color: red; font-size: 12px;'>商品信息加载失败</div></html>";
         }
-
         String mainLine = String.format("<span style='font-size: 12px;'>%s</span>",
                 truncateString(commodity.getName(), 24));
-
         String detailLine = String.format("<span style='font-size: 11px; color: #666;'>%s | %s | %s元</span>",
                 sku.getColor() != null ? sku.getColor() : "未知颜色",
                 sku.getStyle() != null ? sku.getStyle() : "未知样式",
                 sku.getPrice() != null ? sku.getPrice().setScale(2, RoundingMode.HALF_UP) : "未知价格");
-
         return "<html><div style='padding: 2px 0;'>" + mainLine + "<br/>" + detailLine + "</div></html>";
     }
-    // 带参数的鼠标适配器
     private MouseAdapter createProductMouseAdapter(Commodity commodity, CommoditySKU sku) {
         return new MouseAdapter() {
             @Override
@@ -628,7 +665,6 @@ public class Mainview extends JFrame {
         return panel;
     }
     private JLabel totalLabel;
-    // 增加购物车商品数量
     private void increaseCartItemQuantity(int userId, int skuId) {
         try {
             CartJDBC.increaseQuantity(userId, skuId);
@@ -741,20 +777,13 @@ public class Mainview extends JFrame {
                             "输入错误", JOptionPane.ERROR_MESSAGE);
                     return; // 如果输入为空，直接返回，不再继续执行
                 }
-                // 更新用户字段
                 updateUserField(fieldType, newValue);
-
-                // 调用数据库更新方法
                 String result = UserJDBC.updateUser(currentUser);
-
-                // 检查更新结果
                 if (result.startsWith("修改成功")) {
                     updateUIField(fieldType, newValue); // 更新UI
                     refreshProfilePanel(); // 刷新面板
                     dialog.dispose(); // 关闭对话框
                 }
-
-                // 显示提示信息
                 JOptionPane.showMessageDialog(dialog, result, "提示", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
                 // 处理异常情况
@@ -859,12 +888,10 @@ public class Mainview extends JFrame {
         profilePanel.revalidate();
         profilePanel.repaint();
     }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             FlatMTMaterialLighterIJTheme.setup();
-            UIManager.put("Button.arc", 20); // 圆角按钮
-            UIManager.put("Component.arc", 20); // 圆角组件
-            UIManager.put("TextComponent.arc", 10); // 文本框圆角
             User user = UserJDBC.getUserByUsername("Kokomi");
             Mainview mainview = new Mainview(user);
             mainview.setVisible(true);

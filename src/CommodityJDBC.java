@@ -16,41 +16,7 @@ public class CommodityJDBC {
     private static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD);
     }
-    // 添加商品基本信息（默认款式）
-    /*
-    public static boolean addCommodity(Commodity commodity) throws SQLException {
-        String sql = "INSERT INTO commodities (id, name, type, detail, production_date, manufacturer, origin, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (Connection conn = getConnection()) {
-            conn.setAutoCommit(false); // 开启事务
-            if (commodityExists(conn, commodity.getId())) {
-                System.out.println("错误：商品ID已存在");
-                return false;
-            }
-            if (commodityExists(conn, commodity.getName())) {
-                System.out.println("警告：商品名称 '"+commodity.getName()+"' 已存在！");
-                System.out.print("是否要继续添加？(y/n): ");
-                Scanner scanner = new Scanner(System.in);
-                String choice = scanner.nextLine().trim().toLowerCase();
-                if (!choice.equals("y")) {
-                    System.out.println("用户取消添加商品");
-                    return false;
-                }
-            }
-
-            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                setCommodityParameters(pstmt, commodity);
-                int affectedRows = pstmt.executeUpdate();
-                conn.commit(); // 提交事务
-                return affectedRows > 0;
-            } catch (SQLException e) {
-                conn.rollback(); // 回滚事务
-                handleSQLException(e);
-                return false;
-            }
-        }
-    }
-*/
     public static boolean addCommodity(Commodity commodity, List<CommoditySKU> skus) {
         Connection conn = null;
         try {
@@ -84,7 +50,6 @@ public class CommodityJDBC {
                     }
                 }
             }
-
             // 插入SKU数据（关联获取到的商品ID）
             try (PreparedStatement pstmt = conn.prepareStatement(
                     "INSERT INTO skus (commodityid, color, style, price, stock) " +
@@ -359,6 +324,81 @@ public class CommodityJDBC {
             List<Commodity> result = new ArrayList<>(commodityMap.values());
             if (result.isEmpty()) {
                 System.out.println("未找到名称包含 [" + name + "] 的商品");
+            }
+            return result;
+        } catch (SQLException e) {
+            handleSQLException(e);
+            return Collections.emptyList();
+        }
+    }
+    //模糊搜索
+    public static List<Commodity> searchCommodities(String keyword) {
+        // 构建包含多个字段的模糊查询SQL
+        String sql = "SELECT c.*, cs.skuid, cs.commodityid, cs.color, cs.style, cs.price, cs.stock " +
+                "FROM commodities c " +
+                "LEFT JOIN skus cs ON c.id = cs.commodityid " +
+                "WHERE c.name LIKE ? " +
+                "   OR c.type LIKE ? " +
+                "   OR c.detail LIKE ? " +
+                "   OR c.manufacturer LIKE ? " +
+                "   OR c.origin LIKE ? " +
+                "   OR c.remark LIKE ?";
+
+        Map<Integer, Commodity> commodityMap = new LinkedHashMap<>();
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            // 为所有6个参数设置相同的搜索关键字（两端添加通配符）
+            for (int i = 1; i <= 6; i++) {
+                pstmt.setString(i, "%" + keyword + "%");
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    int commodityId = rs.getInt("id");
+
+                    // 使用 computeIfAbsent 创建或获取已有商品对象
+                    Commodity commodity = commodityMap.computeIfAbsent(commodityId, k -> {
+                        Commodity c = new Commodity();
+                        // 设置商品基础信息（精简后的设置方式）
+                        c.setId(commodityId);
+                        try {
+                            c.setName(rs.getString("name"));
+                        c.setType(rs.getString("type"));
+                        c.setDetail(rs.getString("detail"));
+                        c.setProductionDate(rs.getDate("production_date"));
+                        c.setManufacturer(rs.getString("manufacturer"));
+                        c.setOrigin(rs.getString("origin"));
+                        c.setRemark(rs.getString("remark"));
+                        } catch (SQLException e) {
+                            throw new RuntimeException(e);
+                        }
+                        c.setSkus(new ArrayList<>());
+                        return c;
+                    });
+
+                    // 处理SKU信息
+                    if (rs.getObject("skuid") != null) {
+                        CommoditySKU sku = new CommoditySKU();
+                        sku.setSkuId(rs.getInt("skuid"));
+                        sku.setCommodityid(rs.getInt("commodityid"));
+                        sku.setColor(rs.getString("color"));
+                        sku.setStyle(rs.getString("style"));
+                        sku.setPrice(rs.getDouble("price"));
+                        sku.setStock(rs.getInt("stock"));
+
+                        // 当颜色或样式有值时才添加到列表
+                        if (sku.getColor() != null || sku.getStyle() != null) {
+                            commodity.getSkus().add(sku);
+                        }
+                    }
+                }
+            }
+
+            List<Commodity> result = new ArrayList<>(commodityMap.values());
+            if (result.isEmpty()) {
+                System.out.println("未找到包含 [" + keyword + "] 的商品");
             }
             return result;
         } catch (SQLException e) {
