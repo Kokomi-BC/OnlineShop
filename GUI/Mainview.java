@@ -1,6 +1,7 @@
 package GUI;
 
 import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialLighterIJTheme;
+import net.miginfocom.swing.MigLayout;
 import src.*;
 
 import javax.swing.*;
@@ -25,14 +26,12 @@ public class Mainview extends JFrame {
     private JPanel cartPanel; // 定义类级别的变量
     private final CardLayout cardLayout;
     private final JPanel mainPanel;
-    private DefaultListModel<String> productListModel;
-    protected JList<String> productList;
     private final User currentUser;
     private static final String PRODUCT_CARD = "ProductList";
     private static final String CART_CARD = "Cart";
     private static final String PROFILE_CARD = "Profile";
     public Mainview(User user) {
-        this.currentUser = user; // 保存当前登录用户
+        this.currentUser = user;
         setTitle("购物应用");
         setSize(800, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -103,7 +102,7 @@ public class Mainview extends JFrame {
         // 搜索框使用FlatLaf特性
         JPanel searchBoxPanel = new JPanel(new BorderLayout());
         searchField = new JTextField();
-        searchField.putClientProperty("JTextField.placeholderText", "输入商品名称搜索...");
+        searchField.putClientProperty("JTextField.placeholderText", "输入内容搜索...");
         searchField.putClientProperty("JTextField.showClearButton", true);  // 显示清空按钮
         searchField.putClientProperty("JComponent.roundRect", true);  // 圆角样式
         searchBoxPanel.add(searchField, BorderLayout.CENTER);
@@ -113,7 +112,6 @@ public class Mainview extends JFrame {
         searchIcon.setBorder(BorderFactory.createEmptyBorder());
         searchIcon.setContentAreaFilled(false);
         searchBoxPanel.add(searchIcon, BorderLayout.EAST);
-
         titleSearchPanel.add(searchBoxPanel, BorderLayout.CENTER);
         topPanel.add(titleSearchPanel, BorderLayout.NORTH);
         // 搜索状态标签使用次要文本颜色
@@ -158,39 +156,13 @@ public class Mainview extends JFrame {
                 searchTimer.restart(); // 重置计时器以延迟搜索
             }
         });
-    }private JTextField createSearchField() {
-        JTextField field = new JTextField();
-        field.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(204, 204, 204)),
-                BorderFactory.createEmptyBorder(8, 15, 8, 15)
-        ));
-        field.setForeground(new Color(51, 51, 51));
-        field.putClientProperty("JTextField.placeholderText", "输入商品名称搜索..."); // Java 11+ 支持
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(0, 122, 255)),
-                        BorderFactory.createEmptyBorder(8, 15, 8, 15)
-                ));
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(204, 204, 204)),
-                        BorderFactory.createEmptyBorder(8, 15, 8, 15)
-                ));
-            }
-        });
-        return field;
     }
+
     private void performSearch(String keyword) {
         showSearchStatus("搜索中...", new Color(153, 153, 153));
         new SwingWorker<List<Commodity>, Void>() {
             @Override
-            protected List<Commodity> doInBackground() throws SQLException {
+            protected List<Commodity> doInBackground() {
                 return CommodityJDBC.searchCommodities(keyword);
             }
             @Override
@@ -628,7 +600,7 @@ public class Mainview extends JFrame {
             }
         };
     }
-    // 辅助方法：截断过长文本
+    // 截断过长文本
     private String truncateString(String text, int maxLength) {
         if (text.length() > maxLength) {
             return text.substring(0, maxLength - 3) + "...";
@@ -657,12 +629,56 @@ public class Mainview extends JFrame {
         panel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         totalLabel = new JLabel("总计：0.00 元");
         JButton checkoutButton = new JButton("去结算");
+        checkoutButton.addActionListener(e -> {
+            checkoutCartItem(currentUser.getId());
+            updateCartDetails();
+        });
         checkoutButton.setBackground(new Color(85, 183, 184));
         checkoutButton.setForeground(Color.WHITE);
         panel.add(totalLabel);
         panel.add(Box.createHorizontalStrut(20));
         panel.add(checkoutButton);
         return panel;
+    }
+    private void checkoutCartItem(int userid) {
+        try {
+            CartJDBC.checkout(userid);
+            JOptionPane.showMessageDialog(this,
+                    "购买成功！",
+                    "结算成功",
+                    JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            String errorMessage = ex.getMessage();
+            if (errorMessage != null) {
+                if (errorMessage.contains("余额不足")) {
+                    JOptionPane.showMessageDialog(this,
+                            "账户余额不足",
+                            "余额不足",
+                            JOptionPane.ERROR_MESSAGE);
+                } else if (errorMessage.contains("购物车为空")) {
+                    JOptionPane.showMessageDialog(this,
+                            "购物车中没有商品",
+                            "购物车为空",
+                            JOptionPane.WARNING_MESSAGE);
+                } else if (errorMessage.contains("库存不足")) {
+                    JOptionPane.showMessageDialog(this,
+                            "部分商品库存不足，请调整数量后重试",
+                            "库存不足",
+                            JOptionPane.WARNING_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "发生错误: " + errorMessage,
+                            "系统错误",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "结账过程中发生未知错误",
+                        "系统错误",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
     private JLabel totalLabel;
     private void increaseCartItemQuantity(int userId, int skuId) {
@@ -720,86 +736,147 @@ public class Mainview extends JFrame {
 
     private JPanel createProfilePanel() {
         profilePanel = new JPanel(new BorderLayout(10, 10));
-        profilePanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        profilePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        // 标题部分
         JLabel titleLabel = new JLabel("个人中心", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 18));
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 20));
         profilePanel.add(titleLabel, BorderLayout.NORTH);
+
+        // 信息展示面板
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
-        usernameLabel = createInfoRow(infoPanel, "用户名：", currentUser.getUsername(), "修改", e -> showEditDialog("username"));
-        createInfoRow(infoPanel, "密码：", "******", "修改", e -> showEditDialog("password"));
-        phoneLabel = createInfoRow(infoPanel, "电话：", currentUser.getPhone(), "修改", e -> showEditDialog("phone"));
-        addressLabel = createInfoRow(infoPanel, "地址：", currentUser.getAddress(), "修改", e -> showEditDialog("address"));
-        balanceLabel = createInfoRow(infoPanel, "余额：", currentUser.getBalance().toString(), "充值", e -> showRechargeDialog());
-        remarkLabel = createInfoRow(infoPanel, "备注：", currentUser.getRemark(), "修改", e -> showEditDialog("remark"));
-        JPanel timePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        timePanel.add(new JLabel("注册时间：" + new SimpleDateFormat("yyyy-MM-dd").format(currentUser.getCreatedTime())));
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // 创建可点击的信息行
+        usernameLabel = createClickableRow(infoPanel, "用户名：", currentUser.getUsername(), "username");
+        phoneLabel = createClickableRow(infoPanel, "电话：", currentUser.getPhone(), "phone");
+        addressLabel = createClickableRow(infoPanel, "地址：", currentUser.getAddress(), "address");
+        balanceLabel = createClickableRow(infoPanel, "余额：", currentUser.getBalance().toString(), "balance");
+        remarkLabel = createClickableRow(infoPanel, "备注：", currentUser.getRemark(), "remark");
+        createClickableRow(infoPanel, "密码：", "******", "password");
+        // 注册时间（不可编辑）
+        JPanel timePanel = createNonClickableRow("注册时间：",
+                new SimpleDateFormat("yyyy-MM-dd").format(currentUser.getCreatedTime()));
         infoPanel.add(timePanel);
+
         profilePanel.add(new JScrollPane(infoPanel), BorderLayout.CENTER);
         return profilePanel;
     }
 
-    private JLabel createInfoRow(JPanel parent, String label, String value, String btnText, ActionListener listener) {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+    private JLabel createClickableRow(JPanel parent, String labelText, String value, String fieldType) {
+        JPanel rowPanel = new JPanel(new BorderLayout(10, 0));
+        rowPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, UIManager.getColor("Component.borderColor")),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        rowPanel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // 标签样式
+        JLabel label = new JLabel(labelText);
+        label.setFont(label.getFont().deriveFont(Font.BOLD));
+        label.setForeground(UIManager.getColor("Label.disabledForeground"));
+
+        // 值标签
         JLabel valueLabel = new JLabel(value);
-        row.add(new JLabel(label));
-        row.add(valueLabel);
-        JButton actionBtn = new JButton(btnText);
-        actionBtn.setPreferredSize(new Dimension(80, 25));
-        actionBtn.addActionListener(listener);
-        row.add(actionBtn);
-        parent.add(row);
+        valueLabel.setFont(valueLabel.getFont().deriveFont(Font.PLAIN, 14));
+
+        // 添加交互效果
+        rowPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if ("balance".equals(fieldType)) {
+                    showRechargeDialog();
+                } else {
+                    showEditDialog(fieldType);
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                rowPanel.setBackground(UIManager.getColor("List.hoverBackground"));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                rowPanel.setBackground(UIManager.getColor("Panel.background"));
+            }
+        });
+
+        rowPanel.add(label, BorderLayout.WEST);
+        rowPanel.add(valueLabel, BorderLayout.EAST);
+        parent.add(rowPanel);
         return valueLabel;
+    }
+
+    private JPanel createNonClickableRow(String labelText, String value) {
+        JPanel panel = new JPanel(new BorderLayout(10, 0));
+        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(label.getFont().deriveFont(Font.BOLD));
+        label.setForeground(UIManager.getColor("Label.disabledForeground"));
+
+        JLabel valueLabel = new JLabel(value);
+        valueLabel.setFont(valueLabel.getFont().deriveFont(Font.PLAIN, 14));
+
+        panel.add(label, BorderLayout.WEST);
+        panel.add(valueLabel, BorderLayout.EAST);
+        return panel;
     }
 
     private void showEditDialog(String fieldType) {
         JDialog dialog = new JDialog(this, "修改信息", true);
-        dialog.setLayout(new GridLayout(3, 2, 10, 10));
-        dialog.setSize(300, 150);
-        JLabel label = new JLabel("新" + getChineseFieldName(fieldType) + "：");
-        JComponent inputField = createInputField(fieldType); // 创建输入字段
-        JButton confirmBtn = new JButton("确认");
-        JButton cancelBtn = new JButton("取消");
-        // 添加组件到对话框
-        dialog.add(label);
-        dialog.add((Component) inputField);
-        dialog.add(confirmBtn);
-        dialog.add(cancelBtn);
-        // 确认按钮的事件处理
-        confirmBtn.addActionListener(e -> {
-            try {
-                // 获取输入值并进行验证
-                String newValue = getInputValue(fieldType, inputField);
-                // 验证输入是否为空
-                if (newValue == null || newValue.trim().isEmpty()) {
-                    JOptionPane.showMessageDialog(dialog,
-                            "字段 '" + getChineseFieldName(fieldType) + "' 不能为空，请重新输入。",
-                            "输入错误", JOptionPane.ERROR_MESSAGE);
-                    return; // 如果输入为空，直接返回，不再继续执行
-                }
-                updateUserField(fieldType, newValue);
-                String result = UserJDBC.updateUser(currentUser);
-                if (result.startsWith("修改成功")) {
-                    updateUIField(fieldType, newValue); // 更新UI
-                    refreshProfilePanel(); // 刷新面板
-                    dialog.dispose(); // 关闭对话框
-                }
-                JOptionPane.showMessageDialog(dialog, result, "提示", JOptionPane.INFORMATION_MESSAGE);
-            } catch (Exception ex) {
-                // 处理异常情况
-                JOptionPane.showMessageDialog(dialog, "修改失败：" + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
-            }
-        });
+        dialog.setLayout(new MigLayout("insets 20, gap 15", "[][grow]", "[][][]"));
 
-        // 取消按钮的事件处理
+        // 输入组件
+        JComponent inputField = createInputField(fieldType);
+        JLabel tipLabel = new JLabel("");
+        tipLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
+        tipLabel.setFont(tipLabel.getFont().deriveFont(12f));
+        // 按钮面板
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JButton confirmBtn = new JButton("保存更改");
+        JButton cancelBtn = new JButton("取消");
+        // 组件布局
+        dialog.add(new JLabel("新" + getChineseFieldName(fieldType) + "："), "wrap");
+        dialog.add(inputField, "w 250!, wrap");
+        dialog.add(tipLabel, "gapleft 5, wrap");
+        dialog.add(buttonPanel, "gaptop 15, span");
+
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(confirmBtn);
+        // 事件处理
+        confirmBtn.addActionListener(e -> handleConfirm(fieldType, inputField, dialog));
         cancelBtn.addActionListener(e -> dialog.dispose());
-        // 刷新个人资料面板
-        refreshProfilePanel();
-        // 设置对话框大小、位置并显示
+
         dialog.pack();
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
     }
+
+    private void handleConfirm(String fieldType, JComponent inputField, JDialog dialog) {
+        try {
+            String newValue = getInputValue(fieldType, inputField);
+            if (newValue.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "输入内容不能为空", "输入错误", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            updateUserField(fieldType, newValue);
+            String result = UserJDBC.updateUser(currentUser);
+
+            if (result.startsWith("修改成功")) {
+                updateUIField(fieldType, newValue);
+                refreshProfilePanel();
+                dialog.dispose();
+            }
+            JOptionPane.showMessageDialog(dialog, result, "操作结果", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(dialog, "操作失败: " + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void showRechargeDialog() {
         JDialog dialog = new JDialog(this, "账户充值", true);
         dialog.setLayout(new GridLayout(3, 2, 10, 10));
@@ -835,14 +912,14 @@ public class Mainview extends JFrame {
     }
 
     private String getChineseFieldName(String fieldType) {
-        switch (fieldType) {
-            case "username": return "用户名";
-            case "password": return "密码";
-            case "phone": return "电话";
-            case "address": return "地址";
-            case "remark": return "备注";
-            default: return "";
-        }
+        return switch (fieldType) {
+            case "username" -> "用户名";
+            case "password" -> "密码";
+            case "phone" -> "电话";
+            case "address" -> "地址";
+            case "remark" -> "备注";
+            default -> "";
+        };
     }
 
     private JComponent createInputField(String fieldType) {
@@ -889,7 +966,7 @@ public class Mainview extends JFrame {
         profilePanel.repaint();
     }
 
-    public static void main(String[] args) {
+    public static void main() {
         SwingUtilities.invokeLater(() -> {
             FlatMTMaterialLighterIJTheme.setup();
             User user = UserJDBC.getUserByUsername("Kokomi");

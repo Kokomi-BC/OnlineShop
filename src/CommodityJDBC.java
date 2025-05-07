@@ -17,7 +17,7 @@ public class CommodityJDBC {
         return DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD);
     }
 
-    public static boolean addCommodity(Commodity commodity, List<CommoditySKU> skus) {
+    public static boolean addCommodity(Commodity commodity) {
         Connection conn = null;
         try {
             conn = getConnection();
@@ -25,13 +25,12 @@ public class CommodityJDBC {
             // 插入商品基本信息（使用RETURN_GENERATED_KEYS获取自增ID）
             int commodityId;
             if (commodityExists(conn, commodity.getName())) {
-                System.out.println("警告：商品名称 '"+commodity.getName()+"' 已存在！");
+                System.out.println("警告：商品名称 '" + commodity.getName() + "' 已存在！");
                 System.out.print("是否要继续添加？(y/n): ");
                 Scanner scanner = new Scanner(System.in);
                 String choice = scanner.nextLine().trim().toLowerCase();
                 if (!choice.equals("y")) {
                     System.out.println("用户取消添加商品");
-
                     return false;
                 }
             }
@@ -51,32 +50,35 @@ public class CommodityJDBC {
                 }
             }
             // 插入SKU数据（关联获取到的商品ID）
-            try (PreparedStatement pstmt = conn.prepareStatement(
-                    "INSERT INTO skus (commodityid, color, style, price, stock) " +
-                            "VALUES (?, ?, ?, ?, ?)",
-                    Statement.RETURN_GENERATED_KEYS)) {
+            List<CommoditySKU> skus = commodity.getSkus(); // 获取类内置的SKU列表
+            if (skus != null && !skus.isEmpty()) { // 添加非空检查
+                try (PreparedStatement pstmt = conn.prepareStatement(
+                        "INSERT INTO skus (commodityid, color, style, price, stock) " +
+                                "VALUES (?, ?, ?, ?, ?)",
+                        Statement.RETURN_GENERATED_KEYS)) {
 
-                for (CommoditySKU sku : skus) {
-                    pstmt.setInt(1, commodityId);  // 关联商品ID
-                    pstmt.setString(2, sku.getColor());
-                    pstmt.setString(3, sku.getStyle());
-                    pstmt.setBigDecimal(4, sku.getPrice());
-                    pstmt.setInt(5, sku.getStock());
-                    pstmt.addBatch();
-                }
-                int[] results = pstmt.executeBatch();
-                for (int i = 0; i < results.length; i++) {
-                    if (results[i] == Statement.EXECUTE_FAILED) {
-                        throw new BatchUpdateException(
-                                "SKU批量插入失败（第" + (i+1) + "条记录失败）",
-                                results
-                        );
+                    for (CommoditySKU sku : skus) {
+                        pstmt.setInt(1, commodityId);  // 关联商品ID
+                        pstmt.setString(2, sku.getColor());
+                        pstmt.setString(3, sku.getStyle());
+                        pstmt.setBigDecimal(4, sku.getPrice());
+                        pstmt.setInt(5, sku.getStock());
+                        pstmt.addBatch();
                     }
-                }
-                try (ResultSet rs = pstmt.getGeneratedKeys()) {
-                    int index = 0;
-                    while (rs.next() && index < skus.size()) {
-                        skus.get(index++).setSkuId(rs.getInt(1));
+                    int[] results = pstmt.executeBatch();
+                    for (int i = 0; i < results.length; i++) {
+                        if (results[i] == Statement.EXECUTE_FAILED) {
+                            throw new BatchUpdateException(
+                                    "SKU批量插入失败（第" + (i + 1) + "条记录失败）",
+                                    results
+                            );
+                        }
+                    }
+                    try (ResultSet rs = pstmt.getGeneratedKeys()) {
+                        int index = 0;
+                        while (rs.next() && index < skus.size()) {
+                            skus.get(index++).setSkuId(rs.getInt(1));
+                        }
                     }
                 }
             }
@@ -270,35 +272,11 @@ public class CommodityJDBC {
                     c.setId(commodityId);
                     try {
                         c.setName(rs.getString("name"));
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
                         c.setType(rs.getString("type"));
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
                         c.setDetail(rs.getString("detail"));
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
                         c.setProductionDate(rs.getDate("production_date"));
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
                         c.setManufacturer(rs.getString("manufacturer"));
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
                         c.setOrigin(rs.getString("origin"));
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
                         c.setRemark(rs.getString("remark"));
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
@@ -345,19 +323,15 @@ public class CommodityJDBC {
                 "   OR c.remark LIKE ?";
 
         Map<Integer, Commodity> commodityMap = new LinkedHashMap<>();
-
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             // 为所有6个参数设置相同的搜索关键字（两端添加通配符）
             for (int i = 1; i <= 6; i++) {
                 pstmt.setString(i, "%" + keyword + "%");
             }
-
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     int commodityId = rs.getInt("id");
-
                     // 使用 computeIfAbsent 创建或获取已有商品对象
                     Commodity commodity = commodityMap.computeIfAbsent(commodityId, k -> {
                         Commodity c = new Commodity();
@@ -377,7 +351,6 @@ public class CommodityJDBC {
                         c.setSkus(new ArrayList<>());
                         return c;
                     });
-
                     // 处理SKU信息
                     if (rs.getObject("skuid") != null) {
                         CommoditySKU sku = new CommoditySKU();
@@ -387,7 +360,6 @@ public class CommodityJDBC {
                         sku.setStyle(rs.getString("style"));
                         sku.setPrice(rs.getDouble("price"));
                         sku.setStock(rs.getInt("stock"));
-
                         // 当颜色或样式有值时才添加到列表
                         if (sku.getColor() != null || sku.getStyle() != null) {
                             commodity.getSkus().add(sku);
@@ -450,14 +422,14 @@ public class CommodityJDBC {
         }
     }
     // 事务管理
-    private static void rollbackTransaction(Connection conn) {
+    static void rollbackTransaction(Connection conn) {
         try {
             if (conn != null) conn.rollback();
         } catch (SQLException ex) {
             System.err.println("回滚失败: " + ex.getMessage());
         }
     }
-    private static void handleSQLException(SQLException e) {
+    static void handleSQLException(SQLException e) {
         System.err.println("SQL错误[" + e.getErrorCode() + "]: " + e.getMessage());
     }
     public static boolean updateSkuStock(int commodityId, String color, String style, int newStock) {

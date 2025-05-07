@@ -3,9 +3,6 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-
-import static java.sql.JDBCType.DECIMAL;
-
 public class CartJDBC {
     private static final String JDBC_URL = "jdbc:mysql://localhost:3306/commodities";
     private static final String JDBC_USER = "root";
@@ -213,72 +210,101 @@ public class CartJDBC {
     }
 
     // 结算购物车
-    public void checkout(int userId) throws SQLException {
+    public static void checkout(int userId) throws SQLException {
         try (Connection conn = getConnection()) {
             conn.setAutoCommit(false);
             try {
+                // 1. 获取用户信息（带锁）
+                String address = null;
                 BigDecimal balance;
-                try (PreparedStatement userStmt = conn.prepareStatement("SELECT balance, address FROM users WHERE id = ? FOR UPDATE")) {
+                try (PreparedStatement userStmt = conn.prepareStatement(
+                        "SELECT balance, address FROM users WHERE id = ? FOR UPDATE")) {
                     userStmt.setInt(1, userId);
                     ResultSet rs = userStmt.executeQuery();
                     if (!rs.next()) throw new SQLException("用户不存在");
                     balance = rs.getBigDecimal("balance");
-                    address.set(rs.getString("address"));
+                    address = rs.getString("address"); // 直接使用局部变量
                 }
-                // 2. 获取购物车项及总金额
+                // 2. 获取并验证购物车项
                 List<CartItem> items = new ArrayList<>();
                 BigDecimal totalAmount = BigDecimal.ZERO;
-                String cartSql = "SELECT c.cartid, c.skuid, c.num, s.price, s.stock FROM cart c JOIN skus s ON c.skuid = s.skuid WHERE userid = ? FOR UPDATE";
+                String cartSql = "SELECT c.skuid, c.num, s.price, s.stock "
+                        + "FROM cart c JOIN skus s ON c.skuid = s.skuid "
+                        + "WHERE userid = ? FOR UPDATE";
                 try (PreparedStatement cartStmt = conn.prepareStatement(cartSql)) {
                     cartStmt.setInt(1, userId);
                     ResultSet rs = cartStmt.executeQuery();
                     while (rs.next()) {
                         int skuId = rs.getInt("skuid");
-                        int num = rs.getInt("num");
+                        int quantity = rs.getInt("num");
                         BigDecimal price = rs.getBigDecimal("price");
                         int stock = rs.getInt("stock");
-                        if (num > stock) {
+                        if (quantity > stock) {
                             throw new SQLException("商品 " + skuId + " 库存不足");
                         }
-                        items.add(new CartItem(skuId, num, price));
-                        totalAmount = totalAmount.add(price.multiply(BigDecimal.valueOf(num)));
+                        items.add(new CartItem(skuId, quantity, price));
+                        totalAmount = totalAmount.add(price.multiply(BigDecimal.valueOf(quantity)));
                     }
                 }
+                if (items.isEmpty()) {
+                    throw new SQLException("购物车为空，请添加商品");
+                }
+                // 3. 验证余额
                 if (balance.compareTo(totalAmount) < 0) {
-                    throw new SQLException("余额不足");
+                    throw new SQLException("余额不足，当前余额：" + balance + "，需支付：" + totalAmount);
                 }
                 // 4. 扣减余额
-                try (PreparedStatement updateUser = conn.prepareStatement("UPDATE users SET balance = balance - ? WHERE id = ?")) {
+                try (PreparedStatement updateUser = conn.prepareStatement(
+                        "UPDATE users SET balance = balance - ? WHERE id = ?")) {
                     updateUser.setBigDecimal(1, totalAmount);
                     updateUser.setInt(2, userId);
                     updateUser.executeUpdate();
                 }
-                // 5. 扣减库存并生成订单
-                for (CartItem item : items) {
-                    try (PreparedStatement updateSku = conn.prepareStatement("UPDATE skus SET stock = stock - ? WHERE skuid = ?")) {
-                        updateSku.setInt(1, item.quantity);
-                        updateSku.setInt(2, item.skuId);
-                        updateSku.executeUpdate();
-                    }
-
-                    try (PreparedStatement insertOrder = conn.prepareStatement(
-                            "INSERT INTO orders (userid, skuid, quantity, price, total_amount, status, shipping_address) VALUES (?, ?, ?, ?, ?, '已支付', ?)")) {
-                        insertOrder.setInt(1, userId);
-                        insertOrder.setInt(2, item.skuId);
-                        insertOrder.setInt(3, item.quantity);
-                        insertOrder.setBigDecimal(4, item.price);
-                        insertOrder.setBigDecimal(5, item.price.multiply(BigDecimal.valueOf(item.quantity)));
-                        insertOrder.setString(6, address.get()); // 从之前查询的address
-                        insertOrder.executeUpdate();
+                // 5. 创建主订单
+                int orderId;
+                try (PreparedStatement orderStmt = conn.prepareStatement(
+                        "INSERT INTO orders (userid, total_amount, status, shipping_address,payment_method) "
+                                + "VALUES (?, ?, '已支付', ?,'默认方式')",
+                        Statement.RETURN_GENERATED_KEYS)) {
+                    orderStmt.setInt(1, userId);
+                    orderStmt.setBigDecimal(2, totalAmount);
+                    orderStmt.setString(3, address);
+                    orderStmt.executeUpdate();
+                    try (ResultSet rs = orderStmt.getGeneratedKeys()) {
+                        if (rs.next()) {
+                            orderId = rs.getInt(1);
+                        } else {
+                            throw new SQLException("创建订单失败");
+                        }
                     }
                 }
-
-                // 6. 清空购物车
-                try (PreparedStatement clearCart = conn.prepareStatement("DELETE FROM cart WHERE userid = ?")) {
+                // 6. 插入订单明细并扣减库存
+                String detailSql = "INSERT INTO order_details (orderid, skuid, quantity, price) VALUES (?, ?, ?, ?)";
+                String updateSkuSql = "UPDATE skus SET stock = stock - ? WHERE skuid = ?";
+                try (PreparedStatement detailStmt = conn.prepareStatement(detailSql);
+                     PreparedStatement updateSkuStmt = conn.prepareStatement(updateSkuSql)) {
+                    for (CartItem item : items) {
+                        // 插入明细
+                        detailStmt.setInt(1, orderId);
+                        detailStmt.setInt(2, item.skuId);
+                        detailStmt.setInt(3, item.quantity);
+                        detailStmt.setBigDecimal(4, item.price);
+                        detailStmt.addBatch();
+                        // 扣减库存
+                        updateSkuStmt.setInt(1, item.quantity);
+                        updateSkuStmt.setInt(2, item.skuId);
+                        updateSkuStmt.addBatch();
+                    }
+                    // 批量执行
+                    detailStmt.executeBatch();
+                    updateSkuStmt.executeBatch();
+                }
+                // 7. 清空购物车
+                try (PreparedStatement clearCart = conn.prepareStatement(
+                        "DELETE FROM cart WHERE userid = ?")) {
                     clearCart.setInt(1, userId);
                     clearCart.executeUpdate();
                 }
-
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
