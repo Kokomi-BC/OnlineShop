@@ -3,56 +3,30 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import static src.CommodityJDBC.getConnection;
 public class CartJDBC {
-    private static final String JDBC_URL = "jdbc:mysql://localhost:3306/commodities";
-    private static final String JDBC_USER = "root";
-    private static final String JDBC_PASSWORD = "root";
-    static {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("驱动加载失败", e);
-        }
-    }
-
-    private final ThreadLocal<String> address = new ThreadLocal<>();
-
-    private static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD);
-    }
     public static void increaseQuantity(int userId, int skuId) throws SQLException {
         try (Connection conn = getConnection()) {
             conn.setAutoCommit(false);
-
-            // 1. 锁定购物车项和SKU
             String selectSql = "SELECT c.cartid, c.num, s.stock " +
                     "FROM cart c " +
                     "JOIN skus s ON c.skuid = s.skuid " +
                     "WHERE c.userid = ? AND c.skuid = ? " +
                     "FOR UPDATE";
-
             try (PreparedStatement stmt = conn.prepareStatement(selectSql)) {
                 stmt.setInt(1, userId);
                 stmt.setInt(2, skuId);
                 ResultSet rs = stmt.executeQuery();
-
-                // 2. 检查是否存在购物车项
                 if (!rs.next()) {
                     throw new SQLException("购物车项不存在（用户ID: " + userId + ", SKU ID: " + skuId + "）");
                 }
-
-                // 3. 提取关键数据
                 int cartId = rs.getInt("cartid");
                 int currentNum = rs.getInt("num");
                 int stock = rs.getInt("stock");
-
-                // 4. 检查库存
                 if (stock < currentNum + 1) {
                     conn.rollback();
                     throw new SQLException("库存不足（当前库存: " + stock + "，需求数量: " + (currentNum + 1) + "）");
                 }
-
-                // 5. 更新数量
                 try (PreparedStatement updateStmt = conn.prepareStatement(
                         "UPDATE cart SET num = num + 1 WHERE cartid = ?")) {
                     updateStmt.setInt(1, cartId);
@@ -103,24 +77,17 @@ public class CartJDBC {
     }
 
     public static void addItem(int userId, int skuId) throws SQLException {
-        // 查询SKU信息和当前购物车数量
         String querySkuSql = "SELECT commodityid, color, style, price, stock FROM skus WHERE skuid = ?";
         String queryCartSql = "SELECT num FROM cart WHERE userid = ? AND skuid = ?";
         String queryCommoditySql = "SELECT name, type, detail FROM commodities WHERE id = ?";
-        String queryUserSql = "SELECT username FROM users WHERE id = ?";
-
-        // 更新语句（只有当库存足够时才执行）
-        String insertSql = "INSERT INTO cart (userid, username, skuid, name, color, style, price, type, detail, num) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1) " +
+        String insertSql = "INSERT INTO cart (userid, skuid, name, color, style, price, type, detail, num) " +
+                "VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, 1) " +
                 "ON DUPLICATE KEY UPDATE num = IF(num < ?, num + 1, num)"; // 添加库存检查
-
         try (Connection conn = getConnection();
              PreparedStatement querySkuStmt = conn.prepareStatement(querySkuSql);
              PreparedStatement queryCartStmt = conn.prepareStatement(queryCartSql);
              PreparedStatement queryCommodityStmt = conn.prepareStatement(queryCommoditySql);
-             PreparedStatement queryUserStmt = conn.prepareStatement(queryUserSql);
              PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-
             // 1. 查询SKU信息
             querySkuStmt.setInt(1, skuId);
             ResultSet skuRs = querySkuStmt.executeQuery();
@@ -151,36 +118,23 @@ public class CartJDBC {
             if (!commodityRs.next()) {
                 throw new SQLException("未找到对应的商品 ID: " + commodityid);
             }
-
             String name = commodityRs.getString("name");
             String type = commodityRs.getString("type");
             String detail = commodityRs.getString("detail");
-
-            // 5. 查询用户信息
-            queryUserStmt.setInt(1, userId);
-            ResultSet userRs = queryUserStmt.executeQuery();
-            if (!userRs.next()) {
-                throw new SQLException("未找到对应的用户 ID: " + userId);
-            }
-            String username = userRs.getString("username");
-
-            // 6. 执行插入/更新操作（带库存检查）
+            // 5. 执行插入/更新操作（带库存检查）
             insertStmt.setInt(1, userId);
-            insertStmt.setString(2, username);
-            insertStmt.setInt(3, skuId);
-            insertStmt.setString(4, name);
-            insertStmt.setString(5, color);
-            insertStmt.setString(6, style);
-            insertStmt.setBigDecimal(7, price);
-            insertStmt.setString(8, type);
-            insertStmt.setString(9, detail);
-            insertStmt.setInt(10, stock); // 用于ON DUPLICATE KEY UPDATE的库存检查
-
+            insertStmt.setInt(2, skuId);
+            insertStmt.setString(3, name);
+            insertStmt.setString(4, color);
+            insertStmt.setString(5, style);
+            insertStmt.setBigDecimal(6, price);
+            insertStmt.setString(7, type);
+            insertStmt.setString(8, detail);
+            insertStmt.setInt(9, stock); // 用于ON DUPLICATE KEY UPDATE的库存检查
             int affectedRows = insertStmt.executeUpdate();
             if (affectedRows == 0) {
                 throw new SQLException("添加商品到购物车失败");
             }
-
         } catch (SQLException e) {
             throw new SQLException("添加商品到购物车时出错: " + e.getMessage(), e);
         }

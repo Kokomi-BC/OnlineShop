@@ -13,10 +13,9 @@ public class CommodityJDBC {
             throw new RuntimeException("驱动加载失败", e);
         }
     }
-    private static Connection getConnection() throws SQLException {
+    static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD);
     }
-
     public static boolean addCommodity(Commodity commodity) {
         Connection conn = null;
         try {
@@ -476,13 +475,9 @@ public class CommodityJDBC {
             System.out.println("无效字段: " + field);
             return false;
         }
-
         String sql = String.format("UPDATE commodities SET %s = ? WHERE id = ?", field);
-
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // 根据字段类型设置参数
             int paramIndex = 1;
             switch (field) {
                 case "production_date":
@@ -505,12 +500,10 @@ public class CommodityJDBC {
             return false;
         }
     }
-
     private static boolean isValidField(String field) {
         return Set.of("name", "type", "detail", "production_date",
                 "manufacturer", "origin", "remark").contains(field);
     }
-
     private static void closeConnection(Connection conn) {
         try {
             if (conn != null && !conn.isClosed()) {

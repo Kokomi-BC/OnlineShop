@@ -2,49 +2,28 @@ package src;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-
+import static src.CommodityJDBC.getConnection;
 public class UserJDBC {
-    private static final String JDBC_URL = "jdbc:mysql://localhost:3306/commodities";
-    private static final String JDBC_USER = "root";
-    private static final String JDBC_PASSWORD = "root";
-
-    static {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to load MySQL JDBC driver");
-        }
-    }
-    // 获取数据库连接
-    private static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD);
-    }
-
     public static String addUser(User user) {
         String checkUsernameSql = "SELECT COUNT(*) FROM users WHERE username = ?";
         String checkPhoneSql = "SELECT COUNT(*) FROM users WHERE phone = ?";
         String insertSql = "INSERT INTO users (username, password, phone, address, balance, remark) VALUES (?, ?, ?, ?, ?, ?)";
-
         try (Connection conn = getConnection();
              PreparedStatement checkUsernameStmt = conn.prepareStatement(checkUsernameSql);
              PreparedStatement checkPhoneStmt = conn.prepareStatement(checkPhoneSql);
              PreparedStatement insertStmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
-
             // 检查用户名是否已存在
             checkUsernameStmt.setString(1, user.getUsername());
             ResultSet usernameRs = checkUsernameStmt.executeQuery();
             if (usernameRs.next() && usernameRs.getInt(1) > 0) {
                 return "用户名已存在";
             }
-
             // 检查电话号码是否已存在
             checkPhoneStmt.setString(1, user.getPhone());
             ResultSet phoneRs = checkPhoneStmt.executeQuery();
             if (phoneRs.next() && phoneRs.getInt(1) > 0) {
                 return "该号码已注册";
             }
-
             // 插入新用户
             insertStmt.setString(1, user.getUsername());
             insertStmt.setString(2, user.getPassword());
