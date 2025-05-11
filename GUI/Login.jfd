@@ -26,10 +26,10 @@ new FormModel {
 				"horizontalAlignment": 0
 				"font": new com.jformdesigner.model.SwingDerivedFont( null, 1, 12, false )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
-				"x": 225
-				"y": 15
-				"width": 125
-				"height": 55
+				"x": 0
+				"y": 10
+				"width": 570
+				"height": 70
 			} )
 			add( new FormComponent( "javax.swing.JLabel" ) {
 				name: "label2"
@@ -70,21 +70,6 @@ new FormModel {
 				"y": 90
 				"width": 305
 				"height": 35
-			} )
-			add( new FormComponent( "com.jformdesigner.designer.wrapper.HSpacer" ) {
-				name: "hSpacer1"
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
-				"x": 0
-				"y": 30
-				"width": 225
-			} )
-			add( new FormComponent( "com.jformdesigner.designer.wrapper.HSpacer" ) {
-				name: "hSpacer2"
-			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
-				"width": 225
-				"height": 10
-				"x": 345
-				"y": 35
 			} )
 			add( new FormComponent( "javax.swing.JButton" ) {
 				name: "button1"

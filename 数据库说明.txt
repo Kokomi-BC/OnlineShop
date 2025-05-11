@@ -42,7 +42,6 @@ CREATE TABLE skus (
 CREATE TABLE cart (
     cartid INT AUTO_INCREMENT COMMENT '购物车ID',
     userid INT NOT NULL COMMENT '客户ID',
-    username VARCHAR(50) NOT NULL COMMENT '客户名',
     skuid INT NOT NULL COMMENT '商品SKUID',
     name VARCHAR(100) NOT NULL COMMENT '商品名称',
     type VARCHAR(50) COMMENT '商品类别',

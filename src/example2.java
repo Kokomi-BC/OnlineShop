@@ -1,10 +1,8 @@
 package src;
 
-
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
-
 public class example2 {
 public static void main(String[] args) throws SQLException {
  String news =UserJDBC.addUser(new User(1,"kokomi","12345678","12345678","湖南省株洲市天元区", BigDecimal.valueOf(19999.9)));

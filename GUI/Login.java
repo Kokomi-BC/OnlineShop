@@ -95,8 +95,6 @@ public class Login extends JFrame {
         label3 = new JLabel();
         passwordField = new JPasswordField();
         usernameField = new JFormattedTextField();
-        hSpacer1 = new JPanel(null);
-        hSpacer2 = new JPanel(null);
         button1 = new JButton();
         button2 = new JButton();
 
@@ -121,7 +119,7 @@ public class Login extends JFrame {
             label1.setHorizontalAlignment(SwingConstants.CENTER);
             label1.setFont(label1.getFont().deriveFont(label1.getFont().getStyle() | Font.BOLD, label1.getFont().getSize() + 12f));
             loginContentPane.add(label1);
-            label1.setBounds(225, 15, 125, 55);
+            label1.setBounds(0, 10, 570, 70);
 
             //---- label2 ----
             label2.setText("\u8d26\u6237");
@@ -146,10 +144,6 @@ public class Login extends JFrame {
             usernameField.setHorizontalAlignment(SwingConstants.LEFT);
             loginContentPane.add(usernameField);
             usernameField.setBounds(155, 90, 305, 35);
-            loginContentPane.add(hSpacer1);
-            hSpacer1.setBounds(0, 30, 225, hSpacer1.getPreferredSize().height);
-            loginContentPane.add(hSpacer2);
-            hSpacer2.setBounds(345, 35, 225, 10);
 
             //---- button1 ----
             button1.setText("\u767b\u5f55");
@@ -192,8 +186,6 @@ public class Login extends JFrame {
     private JLabel label3;
     private JPasswordField passwordField;
     private JFormattedTextField usernameField;
-    private JPanel hSpacer1;
-    private JPanel hSpacer2;
     public JButton button1;
     private JButton button2;
     // JFormDesigner - End of variables declaration  //GEN-END:variables  @formatter:on
