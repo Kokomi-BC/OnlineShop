@@ -169,7 +169,7 @@ public class CartJDBC {
             conn.setAutoCommit(false);
             try {
                 // 1. 获取用户信息（带锁）
-                String address = null;
+                String address;
                 BigDecimal balance;
                 try (PreparedStatement userStmt = conn.prepareStatement(
                         "SELECT balance, address FROM users WHERE id = ? FOR UPDATE")) {
@@ -179,7 +179,6 @@ public class CartJDBC {
                     balance = rs.getBigDecimal("balance");
                     address = rs.getString("address"); // 直接使用局部变量
                 }
-                // 2. 获取并验证购物车项
                 List<CartItem> items = new ArrayList<>();
                 BigDecimal totalAmount = BigDecimal.ZERO;
                 String cartSql = "SELECT c.skuid, c.num, s.price, s.stock "

@@ -5,6 +5,7 @@ import src.UserJDBC;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class Login extends JFrame {
 
@@ -15,7 +16,7 @@ public class Login extends JFrame {
         UIManager.put("TextComponent.arc", 10); // 文本框圆角
         UIManager.put("Component.hoverBackground", new Color(0xE3F2FD));  // 浅蓝色调
         UIManager.put("Component.pressedBackground", new Color(0xBBDEFB));
-        UIManager.put("Component.focusColor", new Color(0x2196F3));  // Material Blue
+        UIManager.put("Component.focusColor", new Color(0x93E1FF));  // Material Blue
         UIManager.put("Component.hoverEffect", true);
         UIManager.put("Component.hoverFadeTime", 200);
         Login loginFrame = new Login();
@@ -31,44 +32,63 @@ public class Login extends JFrame {
         Mainview mainview = new Mainview(user);
         mainview.setVisible(true);
     }
-
     private void loginin(ActionEvent e) {
         String username = usernameField.getText();
-        String password = new String(passwordField.getPassword());
-        
-        // 检查用户名和密码是否为空
-        if (username.isEmpty() || password.isEmpty()) {
+        String inputPassword = new String(passwordField.getPassword()); // 改个更明确的变量名
+        if (username.isEmpty() || inputPassword.isEmpty()) {
             JOptionPane.showMessageDialog(Login.this, "用户名或密码不能为空", "错误", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
-        // 通过用户名从数据库中获取用户信息
-        User user = UserJDBC.getUserByUsername(username);
-        
-        // 验证用户是否存在以及密码是否正确
-        if (user != null && user.getPassword().equals(password)) {
-            // 检查用户的权限
-            if ("admin".equals(user.getPermission())) {
-                // 管理员登录逻辑
-                JOptionPane.showMessageDialog(Login.this, "管理员登录成功", "成功", JOptionPane.INFORMATION_MESSAGE);
-                onAdminLoginSuccess(user); // 调用管理员登录成功的处理方法
+        try {
+            User user = UserJDBC.getUserByUsername(username);
+            if (user != null && BCrypt.checkpw(inputPassword, user.getPassword())) {
+                if ("admin".equals(user.getPermission())) {
+                    onAdminLoginSuccess(user);
+                } else {
+                    JOptionPane.showMessageDialog(Login.this, "登录成功", "成功", JOptionPane.INFORMATION_MESSAGE);
+                    onLoginSuccess(user);
+                }
             } else {
-                // 普通用户登录逻辑
-                JOptionPane.showMessageDialog(Login.this, "登录成功", "成功", JOptionPane.INFORMATION_MESSAGE);
-                onLoginSuccess(user); // 调用普通用户登录成功的处理方法
+                showAuthFailedMessage();
             }
-        } else {
-            // 登录失败提示
-            JOptionPane.showMessageDialog(Login.this, "用户名或密码错误", "错误", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException ex) {
+            System.err.println("密码哈希值格式错误: " + ex.getMessage());
+            showAuthFailedMessage();
         }
     }
+    // 统一认证失败提示方法
+    private void showAuthFailedMessage() {
+        JOptionPane.showMessageDialog(Login.this,
+                "用户名或密码错误",
+                "认证失败",
+                JOptionPane.ERROR_MESSAGE);
+    }
+
 
     // 新增管理员登录成功后的处理方法
     private void onAdminLoginSuccess(User user) {
-        System.out.println("管理员登录成功，跳转到管理界面");
-        login.dispose();
-        Mainview mainview = new Mainview(user);
-        mainview.setVisible(true);
+        Object[] options = {"购物界面", "管理界面"};
+        int choice = JOptionPane.showOptionDialog(
+                Login.this,
+                "请选择要进入的界面",
+                "选择界面",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+        if (choice == 0) { // 购物界面
+            System.out.println("管理员选择进入购物界面");
+            login.dispose();
+            Mainview mainview = new Mainview(user);
+            mainview.setVisible(true);
+        } else if (choice == 1) { // 管理界面
+            System.out.println("管理员选择进入管理界面");
+            login.dispose();
+            Manager managerView = new Manager(user);
+            managerView.setVisible(true);
+        }
     }
 
     private void register(ActionEvent e) {

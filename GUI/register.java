@@ -7,9 +7,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.math.BigDecimal;
-import java.util.Arrays;
+import org.mindrot.jbcrypt.BCrypt;
 import java.util.regex.Pattern;
-
 import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialLighterIJTheme;
 import src.User;
 import src.UserJDBC;
@@ -18,7 +17,6 @@ import src.UserJDBC;
  * @author Nahida
  */
 public class register {
-
     private void cancel(ActionEvent e) {
         register.dispose();
     }
@@ -28,7 +26,6 @@ public class register {
         String username = usernameField2.getText();
         String phone = PhoneField.getText().replaceAll("\\s+", ""); // 移除手机号中的空格
         String address = textField.getText();
-        // 密码一致性校验
         if (!password1.equals(password2)) {
             JOptionPane.showMessageDialog(register, "两次输入的密码不一致，请重新输入", "错误", JOptionPane.ERROR_MESSAGE);
             return;
@@ -47,7 +44,8 @@ public class register {
             JOptionPane.showMessageDialog(register, "请输入正确的手机号格式", "格式错误", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        User user = new User(username, password1, phone, address, BigDecimal.ZERO, "");
+        String hashedPassword = BCrypt.hashpw(password1, BCrypt.gensalt());
+        User user = new User(username, hashedPassword, phone, address, BigDecimal.ZERO, "");
         String result = UserJDBC.addUser(user);
         if (result.startsWith("添加成功")) {
             JOptionPane.showMessageDialog(register, result, "注册成功", JOptionPane.INFORMATION_MESSAGE);
@@ -56,8 +54,6 @@ public class register {
             JOptionPane.showMessageDialog(register, result, "注册失败", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-
 
     void initComponents() {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents  @formatter:off

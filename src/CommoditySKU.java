@@ -57,10 +57,10 @@ public class CommoditySKU {
     public BigDecimal getPrice() {
         return BigDecimal.valueOf(price);
     }
-    public void setPrice(double price) {
+    public void setPrice(Double price) {
         this.price = price;
     }
-    public int getStock() {
+    public Integer getStock() {
         return stock;
     }
     public void setStock(int stock) {
@@ -71,5 +71,12 @@ public class CommoditySKU {
     }
     public String getColor() {
         return color;
+    }
+
+    public void setPrice(BigDecimal bigDecimal) {
+        if (bigDecimal == null) {
+            throw new IllegalArgumentException("价格不能为null");
+        }
+        this.price = bigDecimal.doubleValue();
     }
 }

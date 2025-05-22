@@ -16,6 +16,17 @@ public class User {
     private Date createdTime;
     private Date modifiedTime;
 
+    public User(int id, String username, String password, String phone, String address, BigDecimal balance, String remark, String permission) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.phone = phone;
+        this.address = address;
+        this.balance = balance;
+        this.remark = remark;
+        this.permission = permission;
+    }
+
 
     public String getFieldValue(String fieldName) {
         return switch (fieldName) {

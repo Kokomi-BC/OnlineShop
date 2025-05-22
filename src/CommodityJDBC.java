@@ -1,6 +1,7 @@
 package src;
+import javax.swing.*;
+import java.math.BigDecimal;
 import java.sql.*;
-import java.sql.Date;
 import java.util.*;
 public class CommodityJDBC {
     private static final String JDBC_URL = "jdbc:mysql://localhost:3306/commodities";
@@ -16,30 +17,29 @@ public class CommodityJDBC {
     static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD);
     }
-    public static boolean addCommodity(Commodity commodity) {
+    public static int addCommodity(Commodity commodity) {
         Connection conn = null;
         try {
             conn = getConnection();
             conn.setAutoCommit(false);
-            // 插入商品基本信息（使用RETURN_GENERATED_KEYS获取自增ID）
-            int commodityId;
-            if (commodityExists(conn, commodity.getName())) {
-                System.out.println("警告：商品名称 '" + commodity.getName() + "' 已存在！");
-                System.out.print("是否要继续添加？(y/n): ");
-                Scanner scanner = new Scanner(System.in);
-                String choice = scanner.nextLine().trim().toLowerCase();
-                if (!choice.equals("y")) {
-                    System.out.println("用户取消添加商品");
-                    return false;
+            try (PreparedStatement checkStmt = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM commodities WHERE name = ?")) {
+                checkStmt.setString(1, commodity.getName());
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        System.out.println("商品已存在，无法添加同名商品: " + commodity.getName());
+                        JOptionPane.showMessageDialog(null, "商品已存在，无法添加同名商品", "错误", JOptionPane.ERROR_MESSAGE);
+                        return -1;
+                    }
                 }
             }
+            int commodityId;
             try (PreparedStatement pstmt = conn.prepareStatement(
                     "INSERT INTO commodities (name, type, detail, production_date, manufacturer, origin, remark) " +
                             "VALUES (?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS)) {
                 setCommodityParameter(pstmt, commodity);
                 pstmt.executeUpdate();
-
                 try (ResultSet rs = pstmt.getGeneratedKeys()) {
                     if (rs.next()) {
                         commodityId = rs.getInt(1);
@@ -48,103 +48,18 @@ public class CommodityJDBC {
                     }
                 }
             }
-            // 插入SKU数据（关联获取到的商品ID）
-            List<CommoditySKU> skus = commodity.getSkus(); // 获取类内置的SKU列表
-            if (skus != null && !skus.isEmpty()) { // 添加非空检查
-                try (PreparedStatement pstmt = conn.prepareStatement(
-                        "INSERT INTO skus (commodityid, color, style, price, stock) " +
-                                "VALUES (?, ?, ?, ?, ?)",
-                        Statement.RETURN_GENERATED_KEYS)) {
 
-                    for (CommoditySKU sku : skus) {
-                        pstmt.setInt(1, commodityId);  // 关联商品ID
-                        pstmt.setString(2, sku.getColor());
-                        pstmt.setString(3, sku.getStyle());
-                        pstmt.setBigDecimal(4, sku.getPrice());
-                        pstmt.setInt(5, sku.getStock());
-                        pstmt.addBatch();
-                    }
-                    int[] results = pstmt.executeBatch();
-                    for (int i = 0; i < results.length; i++) {
-                        if (results[i] == Statement.EXECUTE_FAILED) {
-                            throw new BatchUpdateException(
-                                    "SKU批量插入失败（第" + (i + 1) + "条记录失败）",
-                                    results
-                            );
-                        }
-                    }
-                    try (ResultSet rs = pstmt.getGeneratedKeys()) {
-                        int index = 0;
-                        while (rs.next() && index < skus.size()) {
-                            skus.get(index++).setSkuId(rs.getInt(1));
-                        }
-                    }
-                }
-            }
             conn.commit();
-            return true;
+            return commodityId;
         } catch (SQLException e) {
             rollbackTransaction(conn);
             handleSQLException(e);
-            return false;
+            return -1;
         } finally {
             closeConnection(conn);
         }
     }
-    // 带事务的完整商品添加
-    public static boolean addCommodityWithSKUs(Commodity commodity, List<CommoditySKU> skus) {
-        Connection conn = null;
-        try {
-            conn = getConnection();
-            conn.setAutoCommit(false);
-            // 检查商品ID是否已存在
-            if (commodityExists(conn, commodity.getId())) {
-                System.out.println("错误：商品ID已存在");
-                return false;
-            }
-            // 2. 插入商品基本信息（commodityid 存在）
-            try (PreparedStatement pstmt = conn.prepareStatement(
-                    "INSERT INTO commodities (id, name, type, detail, production_date, manufacturer, origin, remark) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)")) {
-                setCommodityParameters(pstmt, commodity);
-                pstmt.executeUpdate();
-            }
-            // 3. 再插入SKU数据（此时 commodityid 已存在，外键约束不会报错）
-            try (PreparedStatement pstmt = conn.prepareStatement(
-                    "INSERT INTO skus (commodityid, color, style, price, stock) " +
-                            "VALUES (?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS)) {
-                for (CommoditySKU sku : skus) {
-                    pstmt.setInt(1, commodity.getId());
-                    pstmt.setString(2, sku.getColor());
-                    pstmt.setString(3, sku.getStyle());
-                    pstmt.setBigDecimal(4, sku.getPrice());
-                    pstmt.setInt(5, sku.getStock());
-                    pstmt.addBatch();
-                }
-                int[] updateCounts = pstmt.executeBatch();
-                for (int count : updateCounts) {
-                    if (count == Statement.EXECUTE_FAILED) {
-                        throw new SQLException("SKU插入失败");
-                    }
-                }
-                try (ResultSet rs = pstmt.getGeneratedKeys()) {
-                    int index = 0;
-                    while (rs.next() && index < skus.size()) {
-                        skus.get(index++).setSkuId(rs.getInt(1));
-                    }
-                }
-            }
-            conn.commit();
-            return true;
-        } catch (SQLException e) {
-            rollbackTransaction(conn);
-            handleSQLException(e);
-            return false;
-        } finally {
-            closeConnection(conn);
-        }
-    }
-    // 查询商品详情（包含SKU）
+
     public static Commodity getCommodityById(int id) {
         String sql = "SELECT c.*, cs.skuid, cs.commodityid, cs.color, cs.style, cs.price, cs.stock " +
                 "FROM commodities c " +
@@ -156,7 +71,6 @@ public class CommodityJDBC {
             ResultSet rs = pstmt.executeQuery();
             Commodity commodity = null;
             List<CommoditySKU> skus = new ArrayList<>();
-
             while (rs.next()) {
                 if (commodity == null) {
                     commodity = new Commodity();
@@ -175,45 +89,38 @@ public class CommodityJDBC {
                     sku.setCommodityid(rs.getInt("commodityid"));
                     sku.setColor(rs.getString("color"));
                     sku.setStyle(rs.getString("style"));
-                    sku.setPrice(rs.getDouble("price"));
+                    sku.setPrice(BigDecimal.valueOf(rs.getDouble("price")));
                     sku.setStock(rs.getInt("stock"));
                     if (sku.getColor() != null || sku.getStyle() != null) {
                         skus.add(sku);
                     }
                 }
             }
-            // 改为控制台输出代替抛异常
             if (commodity == null) {
                 System.out.println("查询失败：未找到ID为 " + id + " 的商品");
-                return null;  // 明确返回null
+                return null;
             }
             commodity.setSkus(skus);
             return commodity;
         } catch (SQLException e) {
             handleSQLException(e);
-            return null;  // 数据库异常也返回null
+            return null;
         }
     }
     public static CommoditySKU getCommoditySKUById(int skuId) {
         String sql = "SELECT skuid, commodityid, color, style, price, stock " +
                 "FROM skus WHERE skuid = ?";
-
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // 设置查询参数
             pstmt.setInt(1, skuId);
             ResultSet rs = pstmt.executeQuery();
-
-            // 处理查询结果
             if (rs.next()) {
                 CommoditySKU sku = new CommoditySKU();
-                // 映射基础字段
                 sku.setSkuId(rs.getInt("skuid"));
                 sku.setCommodityid(rs.getInt("commodityid"));
                 sku.setColor(rs.getString("color"));
                 sku.setStyle(rs.getString("style"));
-                sku.setPrice(rs.getDouble("price"));
+                sku.setPrice(BigDecimal.valueOf(rs.getDouble("price")));
                 sku.setStock(rs.getInt("stock"));
 
                 if (rs.next()) {
@@ -228,22 +135,30 @@ public class CommodityJDBC {
             handleSQLException(e);
             return null;
         }
-    }// 从数据库获取 SKU 信息
-    public static List<CommoditySKU> getCommodityskuByName(String name) {
-        String sql = "SELECT skuid, commodityid, color, style, price, stock FROM skus WHERE commodityid IN " +
-                "(SELECT id FROM commodities WHERE name = ?)";
+    }
+    public static boolean updateSkuStock(int skuid, int delta) throws SQLException {
+        String sql = "UPDATE skus SET stock = stock + ? WHERE skuid = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, delta);
+            pstmt.setInt(2, skuid);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+    public static List<CommoditySKU> getCommodityskuById(int id) {
+        String sql = "SELECT skuid, color, style, price, stock FROM skus WHERE commodityid  = ?";
         List<CommoditySKU> skus = new ArrayList<>();
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, name);
+            pstmt.setInt(1, id);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     CommoditySKU sku = new CommoditySKU();
                     sku.setSkuId(rs.getInt("skuid"));
-                    sku.setCommodityid(rs.getInt("commodityid"));
+                    sku.setCommodityid(id);
                     sku.setColor(rs.getString("color"));
                     sku.setStyle(rs.getString("style"));
-                    sku.setPrice(rs.getDouble("price"));
+                    sku.setPrice(BigDecimal.valueOf(rs.getDouble("price")));
                     sku.setStock(rs.getInt("stock"));
                     skus.add(sku);
                 }
@@ -266,7 +181,7 @@ public class CommodityJDBC {
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
                 int commodityId = rs.getInt("id");
-                Commodity commodity = commodityMap.computeIfAbsent(commodityId, k -> {
+                Commodity commodity = commodityMap.computeIfAbsent(commodityId, _ -> {
                     Commodity c = new Commodity();
                     c.setId(commodityId);
                     try {
@@ -290,7 +205,7 @@ public class CommodityJDBC {
                     sku.setCommodityid(rs.getInt("commodityid"));
                     sku.setColor(rs.getString("color"));
                     sku.setStyle(rs.getString("style"));
-                    sku.setPrice(rs.getDouble("price"));
+                    sku.setPrice(BigDecimal.valueOf(rs.getDouble("price")));
                     sku.setStock(rs.getInt("stock"));
                     // 根据条件添加SKU
                     if (sku.getColor() != null || sku.getStyle() != null) {
@@ -332,7 +247,7 @@ public class CommodityJDBC {
                 while (rs.next()) {
                     int commodityId = rs.getInt("id");
                     // 使用 computeIfAbsent 创建或获取已有商品对象
-                    Commodity commodity = commodityMap.computeIfAbsent(commodityId, k -> {
+                    Commodity commodity = commodityMap.computeIfAbsent(commodityId, _ -> {
                         Commodity c = new Commodity();
                         // 设置商品基础信息（精简后的设置方式）
                         c.setId(commodityId);
@@ -357,7 +272,7 @@ public class CommodityJDBC {
                         sku.setCommodityid(rs.getInt("commodityid"));
                         sku.setColor(rs.getString("color"));
                         sku.setStyle(rs.getString("style"));
-                        sku.setPrice(rs.getDouble("price"));
+                        sku.setPrice(BigDecimal.valueOf(rs.getDouble("price")));
                         sku.setStock(rs.getInt("stock"));
                         // 当颜色或样式有值时才添加到列表
                         if (sku.getColor() != null || sku.getStyle() != null) {
@@ -377,21 +292,7 @@ public class CommodityJDBC {
             return Collections.emptyList();
         }
     }
-    // 辅助方法
-    private static void setCommodityParameters(PreparedStatement pstmt, Commodity c) throws SQLException {
-        pstmt.setInt(1, c.getId());
-        pstmt.setString(2, c.getName());
-        pstmt.setString(3, c.getType());
-        pstmt.setString(4, c.getDetail());
-        if (c.getProductionDate() != null) {
-            pstmt.setDate(5, new java.sql.Date(c.getProductionDate().getTime()));
-        } else {
-            pstmt.setNull(5, Types.DATE);
-        }
-        pstmt.setString(6, c.getManufacturer());
-        pstmt.setString(7, c.getOrigin());
-        pstmt.setString(8, c.getRemark());
-    }
+
     private static void setCommodityParameter(PreparedStatement pstmt, Commodity c) throws SQLException {
         pstmt.setString(1, c.getName());
         pstmt.setString(2, c.getType());
@@ -406,13 +307,6 @@ public class CommodityJDBC {
         pstmt.setString(7, c.getRemark());
     }
 
-    private static boolean commodityExists(Connection conn, int id) throws SQLException {
-        try (PreparedStatement pstmt = conn.prepareStatement(
-                "SELECT 1 FROM commodities WHERE id = ?")) {
-            pstmt.setInt(1, id);
-            return pstmt.executeQuery().next();
-        }
-    }
     private static boolean commodityExists(Connection conn, String name) throws SQLException {
         try (PreparedStatement pstmt = conn.prepareStatement(
                 "SELECT 1 FROM commodities WHERE name = ?")) {
@@ -420,7 +314,6 @@ public class CommodityJDBC {
             return pstmt.executeQuery().next();
         }
     }
-    // 事务管理
     static void rollbackTransaction(Connection conn) {
         try {
             if (conn != null) conn.rollback();
@@ -431,80 +324,179 @@ public class CommodityJDBC {
     static void handleSQLException(SQLException e) {
         System.err.println("SQL错误[" + e.getErrorCode() + "]: " + e.getMessage());
     }
-    public static boolean updateSkuStock(int commodityId, String color, String style, int newStock) {
-        String sql = "UPDATE skus SET stock = stock + ? " +
-                "WHERE commodityid = ? " +
-                "AND (color = ? OR (? IS NULL AND color IS NULL)) " +
-                "AND (style = ? OR (? IS NULL AND style IS NULL))";
+    public static boolean addSKU(int commodityId, CommoditySKU sku) {
+        // 参数校验
+        if (sku == null || sku.getPrice() == null) {
+            System.out.println("SKU或价格不能为空");
+            return false;
+        }
+        String sql = "INSERT INTO skus (commodityid, color, style, price, stock) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, newStock);
-            pstmt.setInt(2, commodityId);
-            pstmt.setString(3, color);
-            pstmt.setString(4, color); // 重复绑定 null 判断参数
-            pstmt.setString(5, style);
-            pstmt.setString(6, style);
-
-            return pstmt.executeUpdate() > 0;
+            pstmt.setInt(1, commodityId);
+            pstmt.setString(2, sku.getColor());  // 允许null（触发数据库默认值）
+            pstmt.setString(3, sku.getStyle());  // 允许null（触发数据库默认值）
+            pstmt.setDouble(4, sku.getPrice().doubleValue());
+            Integer stock = sku.getStock();
+            pstmt.setInt(5, stock != null ? stock : 0);
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
         } catch (SQLException e) {
             handleSQLException(e);
             return false;
         }
     }
-    public static boolean updateSkuPrice(int commodityid, String color, String style, double newPrice) {
-        String sql = "UPDATE skus SET price = ? "  // 修正表名
-                + "WHERE commodityid = ? AND color <=> ? AND style <=> ?"; // 使用字符串比较
-
+    public static boolean deleteSKU(int skuId) {
+        String sql = "DELETE FROM skus WHERE skuid = ?";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setDouble(1, newPrice);
-            pstmt.setInt(2, commodityid);
-            pstmt.setString(3, color);
-            pstmt.setString(4, style);
+            pstmt.setInt(1, skuId);
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
 
-            return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             handleSQLException(e);
             return false;
         }
     }
-
-    public static boolean updateCommodifyPartial(int id, String field, Object value) {
-        if (!isValidField(field)) {
-            System.out.println("无效字段: " + field);
+    public static boolean updateSKU(int skuId, CommoditySKU sku) {
+        if (sku == null) {
+            System.out.println("SKU不能为空");
             return false;
         }
-        String sql = String.format("UPDATE commodities SET %s = ? WHERE id = ?", field);
+        List<String> updates = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+
+        if (sku.getColor() != null) {
+            updates.add("color = ?");
+            params.add(sku.getColor());
+        }
+        if (sku.getStyle() != null) {
+            updates.add("style = ?");
+            params.add(sku.getStyle());
+        }
+        if (sku.getPrice() != null) {
+            updates.add("price = ?");
+            params.add(sku.getPrice());
+        }
+        if (sku.getStock() != null) {
+            updates.add("stock = ?");
+            params.add(sku.getStock());
+        }
+        if (updates.isEmpty()) {
+            System.out.println("未提供有效更新字段");
+            return false;
+        }
+        String sql = "UPDATE skus SET " + String.join(", ", updates) + " WHERE skuid = ?";
+        params.add(skuId);
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            int paramIndex = 1;
-            switch (field) {
-                case "production_date":
-                    if (value instanceof Date) {
-                        pstmt.setDate(paramIndex++, new java.sql.Date(((Date) value).getTime()));
-                    } else {
-                        throw new IllegalArgumentException("production_date需要Date类型");
-                    }
-                    break;
-                default:
-                    pstmt.setObject(paramIndex++, value);
+            for (int i = 0; i < params.size(); i++) {
+                pstmt.setObject(i + 1, params.get(i));
             }
-            pstmt.setInt(paramIndex, id);
-            return pstmt.executeUpdate() > 0;
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
         } catch (SQLException e) {
             handleSQLException(e);
             return false;
-        } catch (IllegalArgumentException e) {
-            System.err.println("参数类型错误: " + e.getMessage());
-            return false;
         }
     }
-    private static boolean isValidField(String field) {
-        return Set.of("name", "type", "detail", "production_date",
-                "manufacturer", "origin", "remark").contains(field);
+    public static boolean updateCommodity(int commodityId, Commodity commodity) {
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false);
+            if (!commodityExistsById(conn, commodityId)) {
+                System.out.println("错误：商品ID " + commodityId + " 不存在！");
+                return false;
+            }
+            if (commodityId <= 0) {
+                System.out.println("错误：无效商品ID");
+                return false;
+            }
+            try (PreparedStatement pstmt = conn.prepareStatement(
+                    "UPDATE commodities SET name=?, type=?, detail=?, production_date=?, manufacturer=?, origin=?, remark=? WHERE id=?")) {
+                setCommodityParameter2(pstmt, commodity);
+                pstmt.setInt(8, commodityId);
+                int affectedRows = pstmt.executeUpdate();
+                if (affectedRows == 0) {
+                    throw new SQLException("更新商品失败，未影响任何行");
+                }
+            }
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            rollbackTransaction(conn);
+            handleSQLException(e);
+            return false;
+        } finally {
+            closeConnection(conn);
+        }
     }
-    private static void closeConnection(Connection conn) {
+    private static void setCommodityParameter2(PreparedStatement pstmt, Commodity c) throws SQLException {
+        pstmt.setString(1, c.getName());
+        pstmt.setString(2, c.getType());
+        pstmt.setString(3, c.getDetail());
+        if (c.getProductionDate() != null) {
+            pstmt.setDate(4, new java.sql.Date(c.getProductionDate().getTime()));
+        } else {
+            pstmt.setNull(4, Types.DATE);
+        }
+        pstmt.setString(5, c.getManufacturer());
+        pstmt.setString(6, c.getOrigin());
+        pstmt.setString(7, c.getRemark());
+    }
+    public static boolean deleteCommodity(int commodityId) {
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false);
+            if (!commodityExistsById(conn, commodityId)) {
+                System.out.println("错误：商品ID " + commodityId + " 不存在！");
+                return false;
+            }
+            try (PreparedStatement pstmt = conn.prepareStatement(
+                    "DELETE FROM commodities WHERE id=?")) {
+                pstmt.setInt(1, commodityId);
+                int affectedRows = pstmt.executeUpdate();
+                if (affectedRows == 0) {
+                    throw new SQLException("删除商品失败，未影响任何行");
+                }
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            rollbackTransaction(conn);
+            handleSQLException(e);
+            return false;
+        } finally {
+            closeConnection(conn);
+        }
+    }
+    private static boolean commodityExistsById(Connection conn, int commodityId) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement(
+                "SELECT COUNT(*) FROM commodities WHERE id=?")) {
+            pstmt.setInt(1, commodityId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+    private static boolean commodityExistsExcludingId(Connection conn, String name, int excludeId) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement(
+                "SELECT COUNT(*) FROM commodities WHERE name=? AND id!=?")) {
+            pstmt.setString(1, name);
+            pstmt.setInt(2, excludeId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+
+    static void closeConnection(Connection conn) {
         try {
             if (conn != null && !conn.isClosed()) {
                 conn.setAutoCommit(true); // 恢复自动提交
@@ -514,24 +506,5 @@ public class CommodityJDBC {
             System.err.println("关闭连接失败: " + e.getMessage());
         }
     }
-    public static List<Map<String, Object>> getSkuDetailsBycommodityid(int commodityid) {
-        List<Map<String, Object>> skuDetails = new ArrayList<>();
-        String sql = "SELECT color, style, stock FROM skus WHERE commodityid = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, commodityid);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    Map<String, Object> sku = new HashMap<>();
-                    sku.put("color", rs.getString("color"));
-                    sku.put("style", rs.getString("style"));
-                    sku.put("stock", rs.getInt("stock"));
-                    skuDetails.add(sku);
-                }
-            }
-        } catch (SQLException e) {
-            handleSQLException(e);
-        }
-        return skuDetails;
-    }
+
 }

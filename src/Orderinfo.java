@@ -5,6 +5,10 @@ import java.time.LocalDateTime;
 
 public class Orderinfo {
     private int orderid;
+    private int detailid;
+    private int skuid;
+    private int userId;
+    private int commodityid;
     private String commodityName;
     private String style;
     private String color;
@@ -14,6 +18,7 @@ public class Orderinfo {
     private String status;
     private String shippingAddress;
     private LocalDateTime createdTime;
+    private LocalDateTime completedTime;
     private String remark;
 
     // Getter and Setter for orderid
@@ -113,5 +118,44 @@ public class Orderinfo {
 
     public void setRemark(String remark) {
         this.remark = remark;
+    }
+
+    public int getCommodityid() {
+        return commodityid;
+    }
+    public void setCommodityid(int commodityid) {
+        this.commodityid = commodityid;
+    }
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public LocalDateTime getCompletedTime() {
+        return completedTime;
+    }
+
+    public void setCompletedTime(LocalDateTime completedTime) {
+        this.completedTime = completedTime;
+    }
+
+    public int getDetailid() {
+        return detailid;
+    }
+
+    public void setDetailid(int detailid) {
+        this.detailid = detailid;
+    }
+
+    public int getSkuid() {
+        return skuid;
+    }
+
+    public void setSkuid(int skuid) {
+        this.skuid = skuid;
     }
 }

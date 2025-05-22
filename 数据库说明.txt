@@ -2,7 +2,7 @@
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT COMMENT '客户ID',
     username VARCHAR(50) UNIQUE NOT NULL COMMENT '客户名',
-    password VARCHAR(50) NOT NULL COMMENT '登录密码',
+    password VARCHAR(120) NOT NULL COMMENT '登录密码',
     phone VARCHAR(20) COMMENT '联系电话',
     address VARCHAR(200) DEFAULT '未填写' COMMENT '地址',
     balance DECIMAL(10,2) DEFAULT 0.00 COMMENT '账户余额',

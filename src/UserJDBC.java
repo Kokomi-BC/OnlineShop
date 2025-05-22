@@ -18,13 +18,11 @@ public class UserJDBC {
             if (usernameRs.next() && usernameRs.getInt(1) > 0) {
                 return "用户名已存在";
             }
-            // 检查电话号码是否已存在
             checkPhoneStmt.setString(1, user.getPhone());
             ResultSet phoneRs = checkPhoneStmt.executeQuery();
             if (phoneRs.next() && phoneRs.getInt(1) > 0) {
                 return "该号码已注册";
             }
-            // 插入新用户
             insertStmt.setString(1, user.getUsername());
             insertStmt.setString(2, user.getPassword());
             insertStmt.setString(3, user.getPhone());
@@ -36,7 +34,7 @@ public class UserJDBC {
                 try (ResultSet generatedKeys = insertStmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         int generatedId = generatedKeys.getInt(1);
-                        return "添加成功，用户名" + user.getUsername() + " 用户ID: " + generatedId;
+                        return "添加成功" ;
                     }
                 }
                 return "添加成功";
@@ -49,19 +47,29 @@ public class UserJDBC {
         }
     }
     public static String updateUser(User user) {
-        String updateSql = "UPDATE users SET username = ?, password = ?, phone = ?, address = ?, balance = ?, remark = ? WHERE id = ?";
+        StringBuilder updateSqlBuilder = new StringBuilder("UPDATE users SET username = ?, phone = ?, address = ?, balance = ?, remark = ?");
+        boolean passwordProvided = user.getPassword() != null;
+
+        if (passwordProvided) {
+            updateSqlBuilder.append(", password = ?");
+        }
+        updateSqlBuilder.append(" WHERE id = ?");
         try (Connection conn = getConnection();
-             PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
-            updateStmt.setString(1, user.getUsername());
-            updateStmt.setString(2, user.getPassword());
-            updateStmt.setString(3, user.getPhone());
-            updateStmt.setString(4, user.getAddress());
-            updateStmt.setBigDecimal(5, user.getBalance());
-            updateStmt.setString(6, user.getRemark());
-            updateStmt.setInt(7, user.getId());
+             PreparedStatement updateStmt = conn.prepareStatement(updateSqlBuilder.toString())) {
+            int paramIndex = 1;
+            updateStmt.setString(paramIndex++, user.getUsername());
+            updateStmt.setString(paramIndex++, user.getPhone());
+            updateStmt.setString(paramIndex++, user.getAddress());
+            updateStmt.setBigDecimal(paramIndex++, user.getBalance());
+            updateStmt.setString(paramIndex++, user.getRemark());
+
+            if (passwordProvided) {
+                updateStmt.setString(paramIndex++, user.getPassword());
+            }
+            updateStmt.setInt(paramIndex, user.getId());
             int affectedRows = updateStmt.executeUpdate();
             if (affectedRows > 0) {
-                return "修改成功" ;
+                return "修改成功";
             } else {
                 return "修改失败，未找到指定用户";
             }
@@ -131,15 +139,12 @@ public class UserJDBC {
         return null;
     }
 
-    // 获取所有用户
     public static List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT id, username, password, phone, address, balance, remark FROM users";
-
+        String sql = "SELECT id, username, password, phone, address, balance, remark, permission FROM users";
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-
             while (rs.next()) {
                 User user = new User(
                         rs.getInt("id"),
@@ -148,7 +153,8 @@ public class UserJDBC {
                         rs.getString("phone"),
                         rs.getString("address"),
                         rs.getBigDecimal("balance"),
-                        rs.getString("remark")
+                        rs.getString("remark"),
+                        rs.getString("permission") // 添加权限字段
                 );
                 users.add(user);
             }
@@ -157,11 +163,73 @@ public class UserJDBC {
         }
         return users;
     }
+    public static String setAdminPermission(int userId) {
+        String checkAdminSql = "SELECT permission FROM users WHERE id = ?";
+        String updatePermissionSql = "UPDATE users SET permission = 'admin' WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement checkAdminStmt = conn.prepareStatement(checkAdminSql);
+             PreparedStatement updateStmt = conn.prepareStatement(updatePermissionSql)) {
+            checkAdminStmt.setInt(1, userId);
+            ResultSet rs = checkAdminStmt.executeQuery();
+            if (rs.next()) {
+                String permission = rs.getString("permission");
+                if ("admin".equals(permission)) {
+                    return "用户ID " + userId + " 已经是管理员，无需再次设置";
+                } else {
+                    updateStmt.setInt(1, userId);
+                    int affectedRows = updateStmt.executeUpdate();
+                    if (affectedRows > 0) {
+                        return "用户ID " + userId + " 的权限已成功设置为管理员";
+                    } else {
+                        return "设置失败，未找到指定用户";
+                    }
+                }
+            } else {
+                return "设置失败，未找到指定用户";
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "数据库错误: " + e.getMessage();
+        }
+    }
 
+    public static String revokeAdminPermission(int userId) {
+        String checkAdminSql = "SELECT permission FROM users WHERE id = ?";
+        String updatePermissionSql = "UPDATE users SET permission = '' WHERE id = ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement checkAdminStmt = conn.prepareStatement(checkAdminSql);
+             PreparedStatement updateStmt = conn.prepareStatement(updatePermissionSql)) {
+
+            // 检查用户权限
+            checkAdminStmt.setInt(1, userId);
+            ResultSet rs = checkAdminStmt.executeQuery();
+
+            if (rs.next()) {
+                String permission = rs.getString("permission");
+                if ("admin".equals(permission)) {
+                    updateStmt.setInt(1, userId);
+                    int affectedRows = updateStmt.executeUpdate();
+                    if (affectedRows > 0) {
+                        return "用户ID " + userId + " 的管理员权限已成功撤销";
+                    } else {
+                        return "撤销失败，未找到指定用户";
+                    }
+                } else {
+                    return "用户ID " + userId + " 不是管理员，无需撤销";
+                }
+            } else {
+                return "撤销失败，未找到指定用户";
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "数据库错误: " + e.getMessage();
+        }
+    }
     // 删除用户
     public static boolean deleteUser(int id) {
         String sql = "DELETE FROM users WHERE id = ?";
-
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
