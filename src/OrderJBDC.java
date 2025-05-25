@@ -142,54 +142,7 @@ public class OrderJBDC {
         }
     }
 
-    public static List<Order> getOrdersByUserId(int userId) {
-        String orderSql = "SELECT * FROM orders WHERE userid = ?";
-        String detailSql = "SELECT * FROM order_details WHERE orderid = ?";
-        List<Order> orders = new ArrayList<>();
 
-        try (Connection conn = getConnection();
-             PreparedStatement orderStmt = conn.prepareStatement(orderSql)) {
-
-            orderStmt.setInt(1, userId);
-            try (ResultSet rs = orderStmt.executeQuery()) {
-                while (rs.next()) {
-                    Order order = new Order();
-                    order.setOrderId(rs.getInt("orderid"));
-                    order.setUserId(rs.getInt("userid"));
-                    order.setTotalAmount(rs.getBigDecimal("total_amount"));
-                    order.setStatus(rs.getString("status"));
-                    order.setShippingAddress(rs.getString("shipping_address"));
-                    order.setPaymentMethod(rs.getString("payment_method"));
-                    order.setCreatedTime(rs.getObject("created_time", LocalDateTime.class));
-                    order.setPaymentTime(rs.getObject("payment_time", LocalDateTime.class));
-                    order.setShippedTime(rs.getObject("shipped_time", LocalDateTime.class));
-                    order.setCompletedTime(rs.getObject("completed_time", LocalDateTime.class));
-                    order.setRemark(rs.getString("remark"));
-
-                    try (PreparedStatement detailStmt = conn.prepareStatement(detailSql)) {
-                        detailStmt.setInt(1, order.getOrderId());
-                        try (ResultSet detailRs = detailStmt.executeQuery()) {
-                            List<OrderDetail> details = new ArrayList<>();
-                            while (detailRs.next()) {
-                                OrderDetail detail = new OrderDetail();
-                                detail.setDetailId(detailRs.getInt("detail_id"));
-                                detail.setOrderId(detailRs.getInt("orderid"));
-                                detail.setSkuId(detailRs.getInt("skuid"));
-                                detail.setQuantity(detailRs.getInt("quantity"));
-                                detail.setPrice(detailRs.getBigDecimal("price"));
-                                details.add(detail);
-                            }
-                            order.setDetails(details);
-                        }
-                    }
-                    orders.add(order);
-                }
-            }
-        } catch (SQLException e) {
-            handleSQLException(e);
-        }
-        return orders;
-    }
 
     public static int getTotalQuantityByUserId(int userId) {
         String sql = "SELECT SUM(od.quantity) AS total_quantity " +
@@ -213,21 +166,22 @@ public class OrderJBDC {
     public static List<Orderinfo> getAllOrderinfos() {
         List<Orderinfo> orders = new ArrayList<>();
         String sql = "SELECT " +
-                "o.userid AS userId, " +
                 "o.orderid AS orderid, " +
-                "o.orderid AS orderid, " +
+                "od.detail_id AS detailid, " +
                 "c.name AS commodityName, " +
                 "c.id AS commodityid, " +
+                "s.skuid AS skuid, " +
                 "s.style AS style, " +
                 "s.color AS color, " +
-                "od.detail_id AS detailid,  " +
                 "od.price * od.quantity AS amount, " +
                 "od.quantity AS quantity, " +
                 "o.payment_method AS paymentMethod, " +
                 "o.status AS status, " +
                 "o.shipping_address AS shippingAddress, " +
                 "o.created_time AS createdTime, " +
-                "o.completed_time AS completedtime, " +
+                "o. shipped_time AS  shipped_time, " +
+                "o. payment_time AS  payment_time, " +
+                "o.completed_time AS completedTime, " +
                 "o.remark AS remark " +
                 "FROM orders o " +
                 "INNER JOIN order_details od ON o.orderid = od.orderid " +
@@ -238,7 +192,6 @@ public class OrderJBDC {
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 Orderinfo orderInfo = new Orderinfo();
-                orderInfo.setUserId(rs.getInt("userId"));      // 设置用户ID
                 orderInfo.setOrderid(rs.getInt("orderid"));
                 orderInfo.setCommodityName(rs.getString("commodityName"));
                 orderInfo.setCommodityid(rs.getInt("commodityid"));
@@ -250,14 +203,24 @@ public class OrderJBDC {
                 orderInfo.setQuantity(rs.getInt("quantity"));
                 orderInfo.setPaymentMethod(rs.getString("paymentMethod"));
                 orderInfo.setStatus(rs.getString("status"));
+                orderInfo.setRemark(rs.getString("remark"));
                 orderInfo.setShippingAddress(rs.getString("shippingAddress"));
                 Timestamp timestamp = rs.getTimestamp("createdTime");
-                Timestamp timestamp1=rs.getTimestamp("completedtime");
-                orderInfo.setCompletedTime(timestamp1.toLocalDateTime());
                 if (timestamp != null) {
                     orderInfo.setCreatedTime(timestamp.toLocalDateTime());
                 }
-                orderInfo.setRemark(rs.getString("remark"));
+                Timestamp completedTimestamp = rs.getTimestamp("completedTime");
+                if (completedTimestamp != null) {
+                    orderInfo.setCompletedTime(completedTimestamp.toLocalDateTime());
+                }
+                Timestamp Shipped_timeTimestamp = rs.getTimestamp("Shipped_time");
+                if (Shipped_timeTimestamp != null) {
+                    orderInfo.setShipped_time(Shipped_timeTimestamp.toLocalDateTime());
+                }
+                Timestamp Payment_timeTimestamp = rs.getTimestamp("Payment_time");
+                if (Payment_timeTimestamp != null) {
+                    orderInfo.setPayment_time(Payment_timeTimestamp.toLocalDateTime());
+                }
                 orders.add(orderInfo);
             }
         } catch (SQLException e) {
@@ -270,7 +233,7 @@ public class OrderJBDC {
     public static List<Orderinfo> getinfoById(int userId) {
         String sql = "SELECT " +
                 "o.orderid AS orderid, " +
-                "od.detail_id AS detailid, " + // 新增明细ID
+                "od.detail_id AS detailid, " +
                 "c.name AS commodityName, " +
                 "c.id AS commodityid, " +
                 "s.skuid AS skuid, " +
@@ -282,6 +245,9 @@ public class OrderJBDC {
                 "o.status AS status, " +
                 "o.shipping_address AS shippingAddress, " +
                 "o.created_time AS createdTime, " +
+                "o. shipped_time AS  shipped_time, " +
+                "o. payment_time AS  payment_time, " +
+                "o.completed_time AS completedTime, " +
                 "o.remark AS remark " +
                 "FROM orders o " +
                 "INNER JOIN order_details od ON o.orderid = od.orderid " +
@@ -300,6 +266,7 @@ public class OrderJBDC {
             while (rs.next()) {
                 Orderinfo orderInfo = new Orderinfo();
                 orderInfo.setOrderid(rs.getInt("orderid"));
+                orderInfo.setDetailid(rs.getInt("detailid"));
                 orderInfo.setPaymentMethod(rs.getString("paymentMethod"));
                 orderInfo.setStatus(rs.getString("status"));
                 orderInfo.setShippingAddress(rs.getString("shippingAddress"));
@@ -316,6 +283,18 @@ public class OrderJBDC {
                 orderInfo.setAmount(amount != null ? amount.doubleValue() : 0.0);
                 orderInfo.setQuantity(rs.getInt("quantity"));
                 orderInfo.setRemark(rs.getString("remark"));
+                Timestamp completedTimestamp = rs.getTimestamp("completedTime");
+                if (completedTimestamp != null) {
+                    orderInfo.setCompletedTime(completedTimestamp.toLocalDateTime());
+                }
+                Timestamp Shipped_timeTimestamp = rs.getTimestamp("Shipped_time");
+                if (Shipped_timeTimestamp != null) {
+                    orderInfo.setShipped_time(Shipped_timeTimestamp.toLocalDateTime());
+                }
+                Timestamp Payment_timeTimestamp = rs.getTimestamp("Payment_time");
+                if (Payment_timeTimestamp != null) {
+                    orderInfo.setPayment_time(Payment_timeTimestamp.toLocalDateTime());
+                }
                 orders.add(orderInfo);
             }
         } catch (SQLException e) {
@@ -328,66 +307,6 @@ public class OrderJBDC {
             } catch (SQLException e) {
                 handleSQLException(e);
             }
-        }
-        return orders;
-    }
-    public static List<Orderinfo> getInfoByOrderId(int orderId) {
-        String sql = "SELECT " +
-                "o.orderid AS orderid, " +
-                "od.detail_id AS detailid, " +
-                "c.name AS commodityName, " +
-                "c.id AS commodityid, " +
-                "s.skuid AS skuid, " +
-                "s.style AS style, " +
-                "s.color AS color, " +
-                "od.price * od.quantity AS amount, " +
-                "od.quantity AS quantity, " +
-                "o.payment_method AS paymentMethod, " +
-                "o.status AS status, " +
-                "o.shipping_address AS shippingAddress, " +
-                "o.created_time AS createdTime, " +
-                "o.completed_time AS completedTime, " +
-                "o.remark AS remark " +
-                "FROM orders o " +
-                "INNER JOIN order_details od ON o.orderid = od.orderid " +
-                "INNER JOIN skus s ON od.skuid = s.skuid " +
-                "INNER JOIN commodities c ON s.commodityid = c.id " +
-                "WHERE o.orderid = ?";
-
-        List<Orderinfo> orders = new ArrayList<>();
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, orderId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    Orderinfo orderInfo = new Orderinfo();
-                    orderInfo.setOrderid(rs.getInt("orderid"));
-                    orderInfo.setDetailid(rs.getInt("detailid"));
-                    orderInfo.setPaymentMethod(rs.getString("paymentMethod"));
-                    orderInfo.setStatus(rs.getString("status"));
-                    orderInfo.setShippingAddress(rs.getString("shippingAddress"));
-                    Timestamp timestamp = rs.getTimestamp("createdTime");
-                    if (timestamp != null) {
-                        orderInfo.setCreatedTime(timestamp.toLocalDateTime());
-                    }
-                    orderInfo.setCommodityName(rs.getString("commodityName"));
-                    orderInfo.setCommodityid(rs.getInt("commodityid"));
-                    orderInfo.setSkuid(rs.getInt("skuid"));
-                    orderInfo.setStyle(rs.getString("style"));
-                    orderInfo.setColor(rs.getString("color"));
-                    BigDecimal amount = rs.getBigDecimal("amount");
-                    orderInfo.setAmount(amount != null ? amount.doubleValue() : 0.0);
-                    orderInfo.setQuantity(rs.getInt("quantity"));
-                    orderInfo.setRemark(rs.getString("remark"));
-                    Timestamp completedTimestamp = rs.getTimestamp("completedTime");
-                    if (completedTimestamp != null) {
-                        orderInfo.setCompletedTime(completedTimestamp.toLocalDateTime());
-                    }
-                    orders.add(orderInfo);
-                }
-            }
-        } catch (SQLException e) {
-            handleSQLException(e);
         }
         return orders;
     }
@@ -407,6 +326,8 @@ public class OrderJBDC {
                 "o.status AS status, " +
                 "o.shipping_address AS shippingAddress, " +
                 "o.created_time AS createdTime, " +
+                "o. shipped_time AS  shipped_time, " +
+                "o. payment_time AS  payment_time, " +
                 "o.completed_time AS completedTime, " +
                 "o.remark AS remark " +
                 "FROM orders o " +
@@ -443,7 +364,14 @@ public class OrderJBDC {
                     if (completedTimestamp != null) {
                         orderInfo.setCompletedTime(completedTimestamp.toLocalDateTime());
                     }
-
+                    Timestamp Shipped_timeTimestamp = rs.getTimestamp("Shipped_time");
+                    if (Shipped_timeTimestamp != null) {
+                        orderInfo.setShipped_time(Shipped_timeTimestamp.toLocalDateTime());
+                    }
+                    Timestamp Payment_timeTimestamp = rs.getTimestamp("Payment_time");
+                    if (Payment_timeTimestamp != null) {
+                        orderInfo.setPayment_time(Payment_timeTimestamp.toLocalDateTime());
+                    }
                     return orderInfo;
                 } else {
                     System.out.println("未找到明细ID: " + detailId);
@@ -475,8 +403,6 @@ public class OrderJBDC {
                     return false;
                 }
             }
-
-            // 2. 更新订单总金额
             String updateTotalSql = "UPDATE orders SET total_amount = (SELECT SUM(price * quantity) FROM order_details WHERE orderid = ?) WHERE orderid = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(updateTotalSql)) {
                 pstmt.setInt(1, orderInfo.getOrderid());
@@ -484,7 +410,6 @@ public class OrderJBDC {
                 pstmt.executeUpdate();
             }
 
-            // 3. 动态构建订单主表更新语句
             StringBuilder updateOrderSql = new StringBuilder("UPDATE orders SET ");
             List<Object> params = new ArrayList<>();
             List<String> setClauses = new ArrayList<>();
@@ -493,7 +418,6 @@ public class OrderJBDC {
             if (orderInfo.getStatus() != null) {
                 setClauses.add("status = ?");
                 params.add(orderInfo.getStatus());
-
                 // 根据状态自动更新时间字段
                 switch (orderInfo.getStatus()) {
                     case "已支付":
@@ -506,10 +430,18 @@ public class OrderJBDC {
                         if (orderInfo.getCompletedTime() != null) {
                             setClauses.add("completed_time = ?");
                             params.add(orderInfo.getCompletedTime());
-                        } else {
+                        }
+                        else {
                             setClauses.add("completed_time = NOW()");
                         }
                         break;
+                    case "已取消": {
+                        setClauses.add("payment_time = null");
+                        setClauses.add("shipped_time = null");
+                        setClauses.add("completed_time = null");
+                        setClauses.add("payment_method = null");
+                        break;
+                    }
                 }
             }
 

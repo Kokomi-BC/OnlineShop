@@ -1,5 +1,4 @@
 package GUI;
-import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialLighterIJTheme;
 import org.mindrot.jbcrypt.BCrypt;
 import src.*;
@@ -12,7 +11,6 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.Rectangle2D;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
@@ -24,7 +22,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Vector;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+
 
 import static src.CommodityJDBC.getCommodityskuById;
 import static src.CommodityJDBC.updateSkuStock;
@@ -61,27 +59,32 @@ public class Manager extends JFrame {
         String[] buttons = {"商品管理", "订单管理", "用户管理"};
 
         for (String text : buttons) {
-            JButton btn = new JButton(text);
-            btn.setPreferredSize(new Dimension(120, 40));
-            btn.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-            btn.addActionListener(_ -> {
-                switch (text) {
-                    case "商品管理":
-                        cardLayout.show(mainPanel, PRODUCT_MANAGE);
-                        break;
-                    case "订单管理":
-                        cardLayout.show(mainPanel, ORDER_MANAGE);
-                        break;
-                    case "用户管理":
-                        cardLayout.show(mainPanel, USER_MANAGE);
-                        break;
-                }
-            });
+            JButton btn = getJButton(text);
             buttonPanel.add(btn);
         }
 
         navPanel.add(buttonPanel, BorderLayout.CENTER);
         return navPanel;
+    }
+
+    private JButton getJButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setPreferredSize(new Dimension(120, 40));
+        btn.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        btn.addActionListener(_ -> {
+            switch (text) {
+                case "商品管理":
+                    cardLayout.show(mainPanel, PRODUCT_MANAGE);
+                    break;
+                case "订单管理":
+                    cardLayout.show(mainPanel, ORDER_MANAGE);
+                    break;
+                case "用户管理":
+                    cardLayout.show(mainPanel, USER_MANAGE);
+                    break;
+            }
+        });
+        return btn;
     }
 
     // ======================= 商品管理面板 =======================
@@ -112,13 +115,11 @@ public class Manager extends JFrame {
         JButton searchIcon = new JButton(UIManager.getIcon("Component.searchIcon"));
         searchIcon.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         searchIcon.setBorder(BorderFactory.createEmptyBorder());
-        searchIcon.setContentAreaFilled(false);
         searchBoxPanel.add(searchIcon, BorderLayout.EAST);
         titleSearchPanel.add(searchBoxPanel, BorderLayout.CENTER);
         topPanel.add(titleSearchPanel, BorderLayout.NORTH);
         searchStatusLabel = new JLabel("", SwingConstants.CENTER);
         searchStatusLabel.setFont(UIManager.getFont("defaultFont"));
-        searchStatusLabel.setForeground(UIManager.getColor("Component.secondaryForeground"));
         searchStatusLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         topPanel.add(searchStatusLabel, BorderLayout.CENTER);
         mainPanel.add(topPanel, BorderLayout.NORTH);
@@ -128,24 +129,12 @@ public class Manager extends JFrame {
         JScrollPane scrollPane = new JScrollPane(productItemsPanel);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.getViewport().setBackground(UIManager.getColor("Panel.background"));
         scrollPane.putClientProperty("JScrollPane.smoothScrolling", true);  // 启用平滑滚动
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         JPanel bottomPanel = new JPanel();
         bottomPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
         JButton addButton = new JButton("+");
         addButton.setFont(new Font("Arial", Font.BOLD, 20));
-        try {
-            UIManager.setLookAndFeel(new FlatLightLaf());
-        } catch (UnsupportedLookAndFeelException ex) {
-            ex.printStackTrace();
-        }
-        addButton.putClientProperty("JButton.arc", 500);
-        addButton.setBackground(new Color(0x2196F3));     // 基础背景色
-        addButton.putClientProperty("JButton.hoverBackground", new Color(0x42A5F5));
-        addButton.putClientProperty("JButton.pressedBackground", new Color(0x1E88E5));
-        addButton.putClientProperty("JButton.showFocusUnderline", false);
-        addButton.setForeground(Color.WHITE);
         addButton.setToolTipText("新建商品");
         addButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));  // 添加手型光标
         bottomPanel.add(addButton);
@@ -187,10 +176,8 @@ public class Manager extends JFrame {
         JTextField remarkField = new JTextField();
         addFormRow(formPanel, "备注：", remarkField);
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        JButton confirmButton = createFlatButton("确认", 0xC3F2C3);
-        confirmButton.setForeground(Color.BLACK);
-        JButton cancelButton = createFlatButton("取消", 0xffffff);
-        cancelButton.setForeground(Color.BLACK);
+        JButton confirmButton = new JButton("确认");
+        JButton cancelButton = new JButton("取消");
         confirmButton.addActionListener(_ -> handleFormSubmission(
                 dialog, nameField, typeCombo, dateSpinner,
                 manufacturerField, originField, detailArea, remarkField
@@ -205,38 +192,8 @@ public class Manager extends JFrame {
         dialog.setVisible(true);
     }
 
-    private JButton createFlatButton(String text, int color) {
-        JButton button = new JButton(text) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                if (!isOpaque()) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g2.setColor(getBackground());
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20); // 20是圆角半径
-                    g2.dispose();
-                }
-                super.paintComponent(g);
-            }
-            @Override
-            protected void paintBorder(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getBackground().darker());
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
-                g2.dispose();
-            }
-        };
-        button.setOpaque(false);
-        button.setContentAreaFilled(false);
-        button.setBackground(new Color(color));
-        button.setForeground(Color.WHITE);
-        button.putClientProperty("JButton.hoverBackground", new Color(color).darker());
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
-        return button;
-    }
+
+
 
     private void addFormRow(JPanel panel, String label, Component field) {
         JLabel jlabel = new JLabel(label);
@@ -352,8 +309,8 @@ public class Manager extends JFrame {
 
     private JPanel createItemPanel(Commodity commodity) {
         final Color baseBg = new Color(255, 255, 255);
-        final Color hoverBg = new Color(236, 236, 236);
-        final Color pressedBg = new Color (255, 238, 229);
+        final Color hoverBg = new Color(220, 247, 255);
+        final Color pressedBg = new Color (147, 225, 255);
         class CustomPanel extends JPanel {
             private boolean isHovered = false;
             private boolean isPressed = false;
@@ -421,11 +378,6 @@ public class Manager extends JFrame {
                 showCommodityDetails(commodity.getId());
             }
         });
-
-        panel.setOpaque(false);
-        panel.setBorder(createItemBorder(UIManager.getColor("Component.borderColor")));
-        panel.setBackground(baseBg);
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
         panel.setOpaque(true);
         panel.setBorder(createItemBorder(UIManager.getColor("Component.borderColor")));
         panel.setBackground(UIManager.getColor("Panel.background"));
@@ -439,7 +391,6 @@ public class Manager extends JFrame {
                 productionDate, commodity.getOrigin());
         JLabel nameLabel = new JLabel(commodity.getName());
         nameLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        nameLabel.setForeground(UIManager.getColor("Component.foreground"));
         JPanel leftPanel = new JPanel(new BorderLayout(5, 5));
         leftPanel.setOpaque(false);
         leftPanel.add(nameLabel, BorderLayout.NORTH);
@@ -452,56 +403,31 @@ public class Manager extends JFrame {
     private JPanel createActionButtons(Commodity commodity) {
         JPanel buttonPanel = new JPanel(new GridLayout(2, 1, 5, 5));
         buttonPanel.setOpaque(false);
-
-        Color lightBlue = Color.decode("#EFC3CA");
-        JButton editButton = createHoverButton("修改",
-                Color.BLACK,
-                Color.decode("#FFECA1"),
-                new Color(230, 230, 230),
-                e -> showEditDialog(commodity));
-
-        JButton deleteButton = createHoverButton("删除",
-                Color.BLACK,
-                lightBlue,
-                lightBlue.darker(),
-                e -> confirmAndDelete(commodity));
+        JButton editButton = createFlatButton("修改", _ -> showEditDialog(commodity));
+        JButton deleteButton = createFlatButton("删除", _ -> confirmAndDelete(commodity));
         buttonPanel.add(editButton);
         buttonPanel.add(deleteButton);
         return buttonPanel;
     }
-    private JButton createHoverButton(String text, Color fg, Color bg, Color hoverBg, ActionListener listener) {
-        JButton button = new JButton(text) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                try {
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    ButtonModel model = getModel();
-                    // 根据按钮状态选择背景色
-                    Color currentBg = bg;
-                    if (model.isPressed()) {
-                        currentBg = hoverBg; // 按下时使用悬停颜色，可根据需要调整
-                    } else if (model.isRollover()) {
-                        currentBg = hoverBg;
-                    }
-                    g2.setColor(currentBg);
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                    // 绘制文本
-                    g2.setColor(fg);
-                    FontMetrics fm = g2.getFontMetrics();
-                    Rectangle2D textBounds = fm.getStringBounds(text, g2);
-                    int x = (int) ((getWidth() - textBounds.getWidth()) / 2);
-                    int y = (int) ((getHeight() - textBounds.getHeight()) / 2 + fm.getAscent());
-                    g2.drawString(text, x, y);
-                } finally {
-                    g2.dispose();
-                }
-            }
-        };
-        button.setRolloverEnabled(true); // 启用悬停状态检测
-        button.setContentAreaFilled(false);
-        button.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
-        button.setFocusPainted(false);
+    private Border createItemBorder(Color color) {
+        return BorderFactory.createCompoundBorder(
+                new Mainview.RoundedBorder(color, 8),
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        );
+    }
+    private JButton createFlatButton(String text, ActionListener listener) {
+        JButton button = new JButton(text);
+        button.setContentAreaFilled(true);
+        button.setForeground(Color.BLACK);
+        if ("删除".equals(text)) {
+            button.setBackground(Color.decode("#FEF6F6"));
+            button.putClientProperty("JButton.hoverBackground", Color.decode("#EFC3CA").darker());
+        } else {
+            button.setBackground(Color.decode("#F4FEFF"));
+            button.putClientProperty("JButton.hoverBackground", Color.decode("#FFECA1").darker());
+        }
+
+        button.setFocusable(false);
         button.addActionListener(listener);
         return button;
     }
@@ -552,15 +478,13 @@ public class Manager extends JFrame {
         JTextField originField = new JTextField();
         addFormRow(formPanel, "商品产地：", originField);
         JTextArea detailArea = new JTextArea(3, 20);
-        JScrollPane detailScroll = new JScrollPane(detailArea);
+        JTextField detailScroll = new JTextField();
         addFormRow(formPanel, "商品详情：", detailScroll);
         JTextField remarkField = new JTextField();
         addFormRow(formPanel, "备注：", remarkField);
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        JButton confirmButton = createFlatButton("确认", 0xC3F2C3);
-        confirmButton.setForeground(Color.BLACK);
-        JButton cancelButton = createFlatButton("取消", 0xffffff);
-        cancelButton.setForeground(Color.BLACK);
+        JButton confirmButton =new JButton("确认");
+        JButton cancelButton = new JButton("取消");
         nameField.setText(original.getName());
         typeCombo.setSelectedItem(original.getType());
         dateSpinner.setValue(original.getProductionDate());
@@ -632,13 +556,6 @@ public class Manager extends JFrame {
         return color;
     }
 
-    private Border createItemBorder(Color color) {
-        return BorderFactory.createCompoundBorder(
-                new Mainview.RoundedBorder(color, 8),
-                BorderFactory.createEmptyBorder(10, 15, 10, 15)
-        );
-    }
-
     private void addInfoRow(JPanel panel, String label, String value) {
         panel.add(new JLabel(label));
         panel.add(new JLabel(value != null ? value : "无"));
@@ -689,10 +606,10 @@ public class Manager extends JFrame {
 
     private JPanel createButtonPanel(JDialog parent, JTable skuTable, int commodityId, SkuTableModel tableModel) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        JButton btnAdd = new JButton("添加SKU");
-        JButton btnEdit = new JButton("修改SKU");
-        JButton btnDelete = new JButton("删除SKU");
-        JButton btnCancel = new JButton("取消");
+        JButton btnAdd = new JButton("添加");
+        JButton btnEdit = new JButton("修改");
+        JButton btnDelete = new JButton("删除");
+        JButton btnCancel = new JButton("确定");
         btnAdd.addActionListener(_ -> handleAddSku(commodityId, parent, tableModel));
         btnEdit.addActionListener(_ -> {
             int selectedRow = skuTable.getSelectedRow();
@@ -732,13 +649,10 @@ public class Manager extends JFrame {
         public CommoditySKU getSkuAt(int row) {
             return skus.get(row);
         }
-
         @Override
         public int getRowCount() { return skus.size(); }
-
         @Override
         public int getColumnCount() { return COLUMNS.length; }
-
         @Override
         public Object getValueAt(int row, int column) {
             CommoditySKU sku = skus.get(row);
@@ -751,7 +665,6 @@ public class Manager extends JFrame {
                 default -> null;
             };
         }
-
         @Override
         public String getColumnName(int column) {
             return COLUMNS[column];
@@ -784,7 +697,6 @@ public class Manager extends JFrame {
     private void handleEditSku(CommoditySKU sku, JDialog parent, SkuTableModel tableModel) {
         JDialog editDialog = new JDialog(parent, "修改SKU", true);
         JPanel panel = createSkuFormPanel(sku);
-
         JButton btnSave = new JButton("保存");
         btnSave.addActionListener(_ -> {
             CommoditySKU updatedSku = parseSkuFromForm(panel);
@@ -836,7 +748,6 @@ public class Manager extends JFrame {
 
     private JTextField createStyledTextField(String text) {
         JTextField tf = new JTextField(text);
-        tf.putClientProperty("JComponent.arc", 10);  // FlatLaf圆角
         tf.setColumns(18);
         return tf;
     }
@@ -846,7 +757,6 @@ public class Manager extends JFrame {
         JFormattedTextField tf = new JFormattedTextField(format);
         tf.setValue(value);
         tf.setHorizontalAlignment(JTextField.RIGHT);
-        tf.putClientProperty("JComponent.arc", 10);
         tf.setColumns(15);
         return tf;
     }
@@ -906,7 +816,7 @@ public class Manager extends JFrame {
                 return false;
             }
         };
-        String[] columns = {"订单ID","明细id" ,"商品名称","颜色","款式", "数量", "金额", "状态", "下单时间","完成时间"};
+        String[] columns = {"订单ID","明细id" ,"商品名称","颜色","款式", "数量", "金额", "状态", "创建时间","支付时间","发货时间","完成时间","订单备注"};
         model.setColumnIdentifiers(columns);
         JTable table = new JTable(model);
         table.setRowHeight(30);
@@ -922,7 +832,7 @@ public class Manager extends JFrame {
             }
         });
         JButton refreshButton = new JButton("刷新");
-        refreshButton.addActionListener(e -> refreshOrderTable(model));
+        refreshButton.addActionListener(_ -> refreshOrderTable(model));
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(refreshButton);
         refreshOrderTable(model);
@@ -945,18 +855,16 @@ public class Manager extends JFrame {
                     o.getAmount(),
                     o.getStatus() != null ? o.getStatus() : "",
                     o.getCreatedTime() != null ? o.getCreatedTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "",
-                    o.getCompletedTime() != null ? o.getCompletedTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : ""
+                    o.getPayment_time() != null ? o.getPayment_time().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "",
+                    o.getShipped_time() != null ? o.getShipped_time().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "",
+                    o.getCompletedTime() != null ? o.getCompletedTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "",
+                    o.getRemark()
             });
         }
 
     }
 
     private void showOrderDetailDialog(int detailId, DefaultTableModel model) {
-        try {
-            UIManager.setLookAndFeel(new FlatLightLaf());
-        } catch (UnsupportedLookAndFeelException e) {
-            e.printStackTrace();
-        }
         Orderinfo order = OrderJBDC.getInfoByDetailId(detailId);
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(createOrderManagementPanel()), true);
         dialog.setTitle("订单详情 - " + detailId);
@@ -977,7 +885,7 @@ public class Manager extends JFrame {
         List<CommoditySKU> availableSkus = getCommodityskuById(order.getCommodityid())
                 .stream()
                 .filter(sku -> sku.getStock() > 0)
-                .collect(Collectors.toList());
+                .toList();
 
         JComboBox<CommoditySKU> skuCombo = new JComboBox<>(new Vector<>(availableSkus));
         skuCombo.setRenderer(new DefaultListCellRenderer() {
@@ -985,28 +893,21 @@ public class Manager extends JFrame {
             public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                                                           boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof CommoditySKU) {
-                    CommoditySKU sku = (CommoditySKU) value;
+                if (value instanceof CommoditySKU sku) {
                     setText(String.format("%s - %s (库存: %d | 价格: ¥%.2f)",
                             sku.getColor(), sku.getStyle(), sku.getStock(), sku.getPrice()));
                 }
                 return this;
             }
         });
-
-        // 设置默认选中当前SKU
         for (int i = 0; i < skuCombo.getItemCount(); i++) {
             if (skuCombo.getItemAt(i).getSkuId() == order.getSkuid()) {
                 skuCombo.setSelectedIndex(i);
                 break;
             }
         }
-
-        // 订单状态组件
         JComboBox<String> statusCombo = new JComboBox<>(new String[]{"待支付", "已支付", "已发货", "已完成", "已取消"});
         statusCombo.setSelectedItem(order.getStatus());
-
-        // 其他输入组件
         JTextField paymentField = new JTextField(order.getPaymentMethod(), 20);
         JTextArea addressArea = new JTextArea(order.getShippingAddress(), 3, 20);
         addressArea.setLineWrap(true);
@@ -1014,8 +915,6 @@ public class Manager extends JFrame {
         JTextArea remarkArea = new JTextArea(order.getRemark(), 3, 20);
         remarkArea.setLineWrap(true);
         JScrollPane remarkScroll = new JScrollPane(remarkArea);
-
-        // 布局配置
         layout.setHorizontalGroup(
                 layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                         .addGroup(layout.createSequentialGroup()
@@ -1036,7 +935,6 @@ public class Manager extends JFrame {
                                         .addComponent(remarkScroll))
                         )
         );
-
         layout.setVerticalGroup(
                 layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
@@ -1063,20 +961,16 @@ public class Manager extends JFrame {
                                 .addComponent(remarkLabel)
                                 .addComponent(remarkScroll))
         );
-
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         JButton saveBtn = new JButton("保存修改");
         JButton cancelBtn = new JButton("取消");
-
-        saveBtn.addActionListener(e -> {
+        saveBtn.addActionListener(_ -> {
             if (paymentField.getText().trim().isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "支付方式不能为空！", "错误", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             CommoditySKU selectedSku = (CommoditySKU) skuCombo.getSelectedItem();
-
-            // 库存校验
             if (selectedSku.getStock() < order.getQuantity()) {
                 JOptionPane.showMessageDialog(dialog,
                         String.format("库存不足！当前库存：%d，订单需要：%d",
@@ -1086,7 +980,6 @@ public class Manager extends JFrame {
                 return;
             }
 
-            // 更新订单信息
             order.setSkuid(selectedSku.getSkuId());
             order.setColor(selectedSku.getColor());
             order.setStyle(selectedSku.getStyle());
@@ -1095,8 +988,6 @@ public class Manager extends JFrame {
             order.setPaymentMethod(paymentField.getText().trim());
             order.setShippingAddress(addressArea.getText().trim());
             order.setRemark(remarkArea.getText().trim());
-
-            // 数据库操作
             try {
                 boolean success = OrderJBDC.updateOrderInfo(order);
                 if (success) {
@@ -1115,26 +1006,14 @@ public class Manager extends JFrame {
                         JOptionPane.ERROR_MESSAGE);
             }
         });
-
-        cancelBtn.addActionListener(e -> dialog.dispose());
-
-        // 按钮样式
+        cancelBtn.addActionListener(_ -> dialog.dispose());
         saveBtn.setPreferredSize(new Dimension(100, 30));
         cancelBtn.setPreferredSize(new Dimension(100, 30));
-        saveBtn.setBackground(new Color(76, 175, 80));
-        saveBtn.setForeground(Color.WHITE);
-        cancelBtn.setBackground(new Color(244, 67, 54));
-        cancelBtn.setForeground(Color.WHITE);
-
         btnPanel.add(saveBtn);
         btnPanel.add(cancelBtn);
-
-        // 组装界面
         mainPanel.add(formPanel, BorderLayout.CENTER);
         mainPanel.add(btnPanel, BorderLayout.SOUTH);
         dialog.add(mainPanel);
-
-        // 显示对话框
         dialog.setLocationRelativeTo(null);
         dialog.setVisible(true);
     }
@@ -1162,12 +1041,14 @@ public class Manager extends JFrame {
                 BorderFactory.createEmptyBorder(0, 0, 10, 0)
         ));
 
-        JButton refreshBtn = createFlatButton("刷新", 0x6C757D);
-        JButton addBtn = createFlatButton("新增用户", 0x28A745);
-        JButton editBtn = createFlatButton("编辑用户", 0x17A2B8);
-        JButton deleteBtn = createFlatButton("删除用户", 0xDC3545);
-        JButton adminBtn = createFlatButton("设管理员", 0x343A40);
-        JButton adminrev = createFlatButton("撤销权限", 0xFF6B6B);
+        JButton refreshBtn = new JButton("刷新");
+        JButton addBtn = new JButton("新增用户");
+        JButton editBtn = new JButton("编辑用户");
+        JButton deleteBtn = new JButton("删除用户");
+        JButton jumpBtn = new JButton("切换至购物界面");
+        JButton exitBtn = new JButton("退出登录");
+        JButton adminBtn = new JButton("设管理员");
+        JButton adminrev = new JButton("撤销权限");
         refreshBtn.addActionListener(_ -> refreshUserTable(model));
         addBtn.addActionListener(_ -> showUserEditDialog(null,model));
         editBtn.addActionListener(_ -> {
@@ -1179,6 +1060,25 @@ public class Manager extends JFrame {
             }
         });
         deleteBtn.addActionListener(_ -> deleteSelectedUser(table, model));
+        jumpBtn.addActionListener(_ ->{
+            dispose();
+            Mainview mainview = new Mainview(currentUser);
+            mainview.setVisible(true);
+        });
+        exitBtn.addActionListener(_ ->{
+            dispose();
+            UIManager.put("Button.arc", 20);
+            UIManager.put("Component.arc", 20);
+            UIManager.put("TextComponent.arc", 10);
+            UIManager.put("Component.arrowType", "chevron");
+            UIManager.put("TitlePane.unifiedBackground", true);
+            UIManager.put("Component.hoverBackground", new Color(0xE3F2FD));
+            UIManager.put("Component.pressedBackground", new Color(0xBBDEFB));
+            UIManager.put("Component.focusColor", new Color(0x55B7B8));
+            UIManager.put("Component.hoverEffect", true);
+            UIManager.put("Component.hoverFadeTime", 200);
+            Login loginFrame = new Login();
+        });
         adminBtn.addActionListener(_ -> setAdminPermission(table, model));
         adminrev.addActionListener(_ ->  revokeAdminPermission(table, model));
         toolBar.add(refreshBtn);
@@ -1193,6 +1093,10 @@ public class Manager extends JFrame {
         toolBar.add(adminBtn);
         toolBar.add(Box.createHorizontalStrut(8));
         toolBar.add(adminrev);
+        toolBar.add(Box.createHorizontalStrut(8));
+        toolBar.add(jumpBtn);
+        toolBar.add(Box.createHorizontalStrut(8));
+        toolBar.add(exitBtn);
         refreshUserTable(model);
         panel.add(toolBar, BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
@@ -1248,8 +1152,8 @@ public class Manager extends JFrame {
         addFormRow(formPanel, gbc, 4, "余额：", true, balanceField);
         addFormRow(formPanel, gbc, 5, "备注：", false, remarkField);
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
-        JButton confirmBtn = createFlatButton("确认", 0x28A745);
-        JButton cancelBtn = createFlatButton("取消", 0x6C757D);
+        JButton confirmBtn = new JButton("确认");
+        JButton cancelBtn = new JButton("取消");
 
         confirmBtn.addActionListener(_ -> {
             if (!validateField(usernameField, "用户名不能为空")) return;
@@ -1397,8 +1301,6 @@ public class Manager extends JFrame {
     public static void main() {
         SwingUtilities.invokeLater(() -> {
             FlatMTMaterialLighterIJTheme.setup();
-            UIManager.put("Button.arc", 999);
-            UIManager.put("Component.arc", 999);
             User user = UserJDBC.getUserByUsername("Kokomi");
             Manager mainview = new Manager(user);
             mainview.setVisible(true);

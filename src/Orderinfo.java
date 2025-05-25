@@ -18,6 +18,8 @@ public class Orderinfo {
     private String status;
     private String shippingAddress;
     private LocalDateTime createdTime;
+    private LocalDateTime payment_time;
+    private LocalDateTime shipped_time;
     private LocalDateTime completedTime;
     private String remark;
 
@@ -157,5 +159,21 @@ public class Orderinfo {
 
     public void setSkuid(int skuid) {
         this.skuid = skuid;
+    }
+
+    public LocalDateTime getShipped_time() {
+        return shipped_time;
+    }
+
+    public void setShipped_time(LocalDateTime shipped_time) {
+        this.shipped_time = shipped_time;
+    }
+
+    public LocalDateTime getPayment_time() {
+        return payment_time;
+    }
+
+    public void setPayment_time(LocalDateTime payment_time) {
+        this.payment_time = payment_time;
     }
 }

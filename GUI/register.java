@@ -44,17 +44,31 @@ public class register {
             JOptionPane.showMessageDialog(register, "请输入正确的手机号格式", "格式错误", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        String hashedPassword = BCrypt.hashpw(password1, BCrypt.gensalt());
-        User user = new User(username, hashedPassword, phone, address, BigDecimal.ZERO, "");
-        String result = UserJDBC.addUser(user);
-        if (result.startsWith("添加成功")) {
-            JOptionPane.showMessageDialog(register, result, "注册成功", JOptionPane.INFORMATION_MESSAGE);
-            register.dispose();
-        } else {
-            JOptionPane.showMessageDialog(register, result, "注册失败", JOptionPane.ERROR_MESSAGE);
+        if(!isValidCodeRight()) {
+            vcode.nextCode();
+            jt_code.setText("");
+            JOptionPane.showMessageDialog(register, "验证码错误", "注册失败", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+            String hashedPassword = BCrypt.hashpw(password1, BCrypt.gensalt());
+            User user = new User(username, hashedPassword, phone, address, BigDecimal.ZERO, "");
+            String result = UserJDBC.addUser(user);
+            if (result.startsWith("添加成功")) {
+                JOptionPane.showMessageDialog(register, result, "注册成功", JOptionPane.INFORMATION_MESSAGE);
+                register.dispose();
+            } else {
+                JOptionPane.showMessageDialog(register, result, "注册失败", JOptionPane.ERROR_MESSAGE);
+            }
+
     }
 
+    public boolean isValidCodeRight() {
+        if(jt_code == null) {
+            return false;
+        }else if(vcode == null) {
+            return true;
+        }else return vcode.getCode().equalsIgnoreCase(jt_code.getText());
+    }
     void initComponents() {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents  @formatter:off
         register = new JDialog();
@@ -71,12 +85,15 @@ public class register {
         cancel = new JButton();
         passwordField2 = new JPasswordField();
         label7 = new JLabel();
+        vcode = new ValidCode();
+        label8 = new JLabel();
+        jt_code = new JFormattedTextField();
 
         //======== register ========
         {
-            register.setMinimumSize(new Dimension(540, 460));
+            register.setMinimumSize(new Dimension(560, 540));
             register.setTitle("\u6ce8\u518c");
-            register.setPreferredSize(new Dimension(540, 460));
+            register.setPreferredSize(new Dimension(560, 540));
             register.setMaximumSize(new Dimension(580, 550));
             var registerContentPane = register.getContentPane();
             registerContentPane.setLayout(null);
@@ -116,7 +133,7 @@ public class register {
             label1.setHorizontalAlignment(SwingConstants.CENTER);
             label1.setFont(label1.getFont().deriveFont(label1.getFont().getStyle() | Font.BOLD, label1.getFont().getSize() + 12f));
             registerContentPane.add(label1);
-            label1.setBounds(190, 10, 125, 55);
+            label1.setBounds(0, 10, 535, 55);
 
             //---- PhoneField ----
             PhoneField.setHorizontalAlignment(SwingConstants.LEFT);
@@ -146,14 +163,14 @@ public class register {
             ok.setForeground(Color.black);
             ok.addActionListener(e -> ok(e));
             registerContentPane.add(ok);
-            ok.setBounds(new Rectangle(new Point(145, 345), ok.getPreferredSize()));
+            ok.setBounds(145, 420, 85, 35);
 
             //---- cancel ----
             cancel.setText("\u53d6\u6d88");
             cancel.setForeground(Color.black);
             cancel.addActionListener(e -> cancel(e));
             registerContentPane.add(cancel);
-            cancel.setBounds(new Rectangle(new Point(295, 345), cancel.getPreferredSize()));
+            cancel.setBounds(310, 420, 85, 35);
 
             //---- passwordField2 ----
             passwordField2.setHorizontalAlignment(SwingConstants.LEFT);
@@ -166,6 +183,20 @@ public class register {
             label7.setHorizontalAlignment(SwingConstants.CENTER);
             registerContentPane.add(label7);
             label7.setBounds(35, 235, 100, 35);
+            registerContentPane.add(vcode);
+            vcode.setBounds(150, 340, 94, 40);
+
+            //---- label8 ----
+            label8.setText("\u9a8c\u8bc1\u7801");
+            label8.setFont(new Font("Microsoft YaHei UI", Font.PLAIN, 19));
+            label8.setHorizontalAlignment(SwingConstants.CENTER);
+            registerContentPane.add(label8);
+            label8.setBounds(65, 345, 75, 35);
+
+            //---- jt_code ----
+            jt_code.setHorizontalAlignment(SwingConstants.LEFT);
+            registerContentPane.add(jt_code);
+            jt_code.setBounds(255, 340, 150, 40);
 
             {
                 // compute preferred size
@@ -217,5 +248,8 @@ public class register {
     private JButton cancel;
     private JPasswordField passwordField2;
     private JLabel label7;
+    private ValidCode vcode;
+    private JLabel label8;
+    private JFormattedTextField jt_code;
     // JFormDesigner - End of variables declaration  //GEN-END:variables  @formatter:on
 }

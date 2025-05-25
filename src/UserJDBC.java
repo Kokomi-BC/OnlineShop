@@ -83,12 +83,20 @@ public class UserJDBC {
     public static User getUserByUsername(String username) {
         String sql = "SELECT id, username, password, phone, address, balance, remark, permission, created_time, modified_time FROM users WHERE username = ?";
 
+        return getUser(username, sql);
+    }
+    // 根据手机号查询用户
+    public static User getUserByUserphone(String phone) {
+        String sql = "SELECT id, username, password, phone, address, balance, remark, permission, created_time, modified_time FROM users WHERE phone = ?";
+
+        return getUser(phone, sql);
+    }
+
+    private static User getUser(String phone, String sql) {
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, username);
+            pstmt.setString(1, phone);
             ResultSet rs = pstmt.executeQuery();
-
             if (rs.next()) {
                 return new User(
                         rs.getInt("id"),

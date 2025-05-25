@@ -6,8 +6,8 @@ new FormModel {
 		add( new FormWindow( "javax.swing.JFrame", new FormLayoutManager( class com.jformdesigner.runtime.NullLayout ) ) {
 			name: "login"
 			"minimumSize": new java.awt.Dimension( 600, 410 )
-			"maximumSize": new java.awt.Dimension( 880, 600 )
-			"preferredSize": new java.awt.Dimension( 600, 410 )
+			"maximumSize": new java.awt.Dimension( 620, 500 )
+			"preferredSize": new java.awt.Dimension( 600, 420 )
 			"background": new java.awt.Color( 255, 255, 255, 255 )
 			"$locationPolicy": 1
 			"defaultCloseOperation": 3
@@ -26,7 +26,7 @@ new FormModel {
 				"horizontalAlignment": 0
 				"font": new com.jformdesigner.model.SwingDerivedFont( null, 1, 12, false )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
-				"x": 0
+				"x": 15
 				"y": 10
 				"width": 570
 				"height": 70
@@ -45,20 +45,20 @@ new FormModel {
 			add( new FormComponent( "javax.swing.JLabel" ) {
 				name: "label3"
 				"text": "密码"
-				"font": new java.awt.Font( "Microsoft YaHei UI", 0, 19 )
+				"font": &Font0 new java.awt.Font( "Microsoft YaHei UI", 0, 19 )
 				"horizontalAlignment": 0
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
 				"width": 50
 				"height": 35
 				"x": 70
-				"y": 170
+				"y": 160
 			} )
 			add( new FormComponent( "javax.swing.JPasswordField" ) {
 				name: "passwordField"
 				"horizontalAlignment": 2
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
 				"x": 155
-				"y": 170
+				"y": 160
 				"width": 305
 				"height": 35
 			} )
@@ -81,9 +81,9 @@ new FormModel {
 				addEvent( new FormEvent( "java.awt.event.ActionListener", "actionPerformed", "loginin", true ) )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
 				"x": 165
-				"y": 250
+				"y": 315
 				"width": 85
-				"height": 32
+				"height": 35
 			} )
 			add( new FormComponent( "javax.swing.JButton" ) {
 				name: "button2"
@@ -91,14 +91,42 @@ new FormModel {
 				"foreground": new java.awt.Color( 51, 51, 51, 255 )
 				addEvent( new FormEvent( "java.awt.event.ActionListener", "actionPerformed", "register", true ) )
 			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
-				"x": 330
-				"y": 250
-				"width": 86
-				"height": 32
+				"x": 335
+				"y": 315
+				"width": 85
+				"height": 35
+			} )
+			add( new FormComponent( "javax.swing.JFormattedTextField" ) {
+				name: "jt_code"
+				"horizontalAlignment": 2
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 180
+				"height": 35
+				"x": 280
+				"y": 230
+			} )
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "label4"
+				"text": "验证码"
+				"font": #Font0
+				"horizontalAlignment": 0
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"width": 100
+				"height": 35
+				"x": 55
+				"y": 230
+			} )
+			add( new FormComponent( "GUI.ValidCode" ) {
+				name: "vcode"
+			}, new FormLayoutConstraints( class com.jformdesigner.runtime.NullConstraints ) {
+				"x": 160
+				"y": 225
+				"width": 95
+				"height": 40
 			} )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 150, 25 )
-			"size": new java.awt.Dimension( 575, 410 )
+			"size": new java.awt.Dimension( 595, 450 )
 		} )
 	}
 }

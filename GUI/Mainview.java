@@ -4,6 +4,7 @@ import org.mindrot.jbcrypt.BCrypt;
 import src.*;
 import net.miginfocom.swing.MigLayout; // 用于 Swing 项目
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
@@ -16,10 +17,9 @@ import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
+
 import static src.CartJDBC.deleteCartItem;
 import static src.OrderJBDC.getTotalQuantityByUserId;
 import static src.OrderJBDC.getinfoById;
@@ -83,7 +83,6 @@ public class Mainview extends JFrame {
     private Timer searchTimer;
     private JLabel searchStatusLabel;
     private JPanel createProductListPanel() {
-        UIManager.put("Component.arc",4);  // 统一组件圆角
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         JPanel topPanel = new JPanel(new BorderLayout());
@@ -735,11 +734,42 @@ public class Mainview extends JFrame {
     private JLabel remarkLabel;
     private JLabel pendingOrdersLabel;
     private JPanel createProfilePanel() {
+
         profilePanel = new JPanel(new BorderLayout(10, 10));
         profilePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        JPanel topPanel = new JPanel(new BorderLayout());
         JLabel titleLabel = new JLabel("个人中心", SwingConstants.CENTER);
+        JToolBar toolBar = new JToolBar();
+        if (Objects.equals(currentUser.getPermission(), "admin")) {
+            JButton jumpBtn = new JButton("切换至管理界面");
+            toolBar.add(jumpBtn);
+            jumpBtn.addActionListener(_ -> {
+                dispose();
+                Manager mainview = new Manager(currentUser);
+                mainview.setVisible(true);
+            });
+        }
+        JButton exitBtn = new JButton("退出登录");
+        toolBar.add(exitBtn);
+        exitBtn.addActionListener(_ -> {
+            dispose();
+            UIManager.put("Button.arc", 20);
+            UIManager.put("Component.arc", 20);
+            UIManager.put("TextComponent.arc", 10);
+            UIManager.put("Component.arrowType", "chevron");
+            UIManager.put("TitlePane.unifiedBackground", true);
+            UIManager.put("Component.hoverBackground", new Color(0xE3F2FD));
+            UIManager.put("Component.pressedBackground", new Color(0xBBDEFB));
+            UIManager.put("Component.focusColor", new Color(0x55B7B8));
+            UIManager.put("Component.hoverEffect", true);
+            UIManager.put("Component.hoverFadeTime", 200);
+            Login loginFrame = new Login();
+        });
+        toolBar.add(Box.createHorizontalGlue());
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 20));
-        profilePanel.add(titleLabel, BorderLayout.NORTH);
+        topPanel.add(toolBar, BorderLayout.NORTH);
+        topPanel.add(titleLabel, BorderLayout.CENTER);
+        profilePanel.add(topPanel, BorderLayout.NORTH);
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
         infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -1101,7 +1131,7 @@ public class Mainview extends JFrame {
     }
     static class OrderTableModel extends AbstractTableModel {
         private List<Orderinfo> orders;
-        private final String[] columnNames = {"订单id","商品id" ,"商品名称", "款式","颜色","金额","数量","支付方式", "状态", "收货地址","下单时间","完成时间","订单备注"};
+        private final String[] columnNames = {"订单id","商品id" ,"商品名称", "款式","颜色","金额","数量","支付方式", "状态", "收货地址", "创建时间","支付时间","发货时间","完成时间","订单备注"};
         private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         public OrderTableModel(List<Orderinfo> orders) {
             this.orders = new ArrayList<>(orders);
@@ -1130,9 +1160,11 @@ public class Mainview extends JFrame {
                 case 7 -> order.getPaymentMethod();
                 case 8 -> order.getStatus();
                 case 9 -> order.getShippingAddress();
-                case 10 -> order.getCreatedTime().format(formatter);
-                case 11 -> order.getCreatedTime().format(formatter);
-                case 12 -> order.getRemark();
+                case 10 -> order.getCreatedTime() == null ? null : order.getCreatedTime().format(formatter);
+                case 11 -> order.getPayment_time() == null ? null : order.getPayment_time().format(formatter);
+                case 12 -> order.getShipped_time() == null ? null : order.getShipped_time().format(formatter);
+                case 13 -> order.getCompletedTime() == null ? null : order.getCompletedTime().format(formatter);
+                case 14 -> order.getRemark();
                 default -> null;
             };
         }
@@ -1145,7 +1177,7 @@ public class Mainview extends JFrame {
         JPanel mainPanel = new JPanel(new MigLayout("wrap 1, insets 0", "[grow]", "[grow][]"));
         JPanel contentPanel = new JPanel(new MigLayout("wrap 2, insets 30",
                 "[right]15[350,grow,fill]",
-                "[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[grow]"));
+                "[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[]10[grow]"));
         Font labelFont = UIManager.getFont("Label.font").deriveFont(Font.BOLD, 14f);
         Font valueFont = UIManager.getFont("Label.font").deriveFont(Font.PLAIN, 14f);
         addFormRow(contentPanel, "订单ID:", formatValue(order.getOrderid()), labelFont, valueFont);
@@ -1162,8 +1194,10 @@ public class Mainview extends JFrame {
         addFormRow(contentPanel, "支付方式:", formatValue(order.getPaymentMethod()), labelFont, valueFont);
         addFormRow(contentPanel, "状态:", formatStatus(order.getStatus()), labelFont, valueFont);
         addFormRow(contentPanel, "收货地址:", formatAddress(order.getShippingAddress()), labelFont, valueFont);
-        addFormRow(contentPanel, "下单时间:", order.getCreatedTime().format(formatter), labelFont, valueFont);
-        addFormRow(contentPanel, "完成时间:", order.getCreatedTime().format(formatter), labelFont, valueFont);
+        addFormRow(contentPanel, "下单时间:", order.getCreatedTime() != null ? order.getCreatedTime().format(formatter) : "N/A", labelFont, valueFont);
+        addFormRow(contentPanel, "支付时间:", order.getPayment_time() != null ? order.getPayment_time().format(formatter) : "N/A", labelFont, valueFont);
+        addFormRow(contentPanel, "发货时间:", order.getShipped_time() != null ? order.getShipped_time().format(formatter) : "N/A", labelFont, valueFont);
+        addFormRow(contentPanel, "完成时间:", order.getCompletedTime() != null ? order.getCompletedTime().format(formatter) : "N/A", labelFont, valueFont);
         addFormRow(contentPanel, "备注:", formatRemarks(order.getRemark()), labelFont, valueFont);
         JLabel moreLabel = createLinkLabel();
         moreLabel.addMouseListener(new MouseAdapter() {
