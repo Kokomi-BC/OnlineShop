@@ -1,10 +1,12 @@
 import GUI.Login;
+import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialLighterIJTheme;
+import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import com.formdev.flatlaf.util.SystemInfo;
 import javax.swing.*;
 import java.awt.*;
 
-public static void main(String[] args) {
+public static void  main(String[] args) {
     SwingUtilities.invokeLater(() -> {
         FlatMTMaterialLighterIJTheme.setup();
         UIManager.put("Button.arc", 20);
@@ -17,6 +19,7 @@ public static void main(String[] args) {
         UIManager.put("Component.focusColor", new Color(0x55B7B8));
         UIManager.put("Component.hoverEffect", true);
         UIManager.put("Component.hoverFadeTime", 200);
+
         if( SystemInfo.isLinux ) {
             JFrame.setDefaultLookAndFeelDecorated( true );
             JDialog.setDefaultLookAndFeelDecorated( true );

@@ -3,7 +3,7 @@ package src;
 import java.math.BigDecimal;
 
 public class CommoditySKU {
-    private Integer skuId; // 使用包装类型以允许null
+    private Integer skuId; 
     private Integer Commodityid;
     private String color;
     private String style;

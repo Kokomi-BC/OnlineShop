@@ -9,9 +9,9 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="mysql-connector-j-9.3.0" level="project" />
     <orderEntry type="library" name="flatlaf-3.6" level="project" />
-    <orderEntry type="library" name="flatlaf-intellij-themes-3.6" level="project" />
     <orderEntry type="library" name="Miglayout" level="project" />
     <orderEntry type="library" name="miglayout-swing-5.2" level="project" />
     <orderEntry type="library" name="jbcrypt-0.4" level="project" />
+    <orderEntry type="library" name="flatlaf-intellij-themes-3.6" level="project" />
   </component>
 </module>
