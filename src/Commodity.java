@@ -7,6 +7,7 @@ public class Commodity {
     private String name;
     private String type;
     private String detail;
+    private String imageBase64;
     private Date productionDate;
     private String manufacturer;
     private String origin;
@@ -14,7 +15,7 @@ public class Commodity {
     private List<CommoditySKU> skus;
 
     public Commodity(int id, String name, String type, String detail, Date productionDate,
-                     String manufacturer, String origin, String remark, List<CommoditySKU> skus) {
+                     String manufacturer, String origin, String remark, String imageBase64, List<CommoditySKU> skus) {
         this.id = id;
         this.name = name;
         this.type = type;
@@ -23,10 +24,15 @@ public class Commodity {
         this.manufacturer = manufacturer;
         this.origin = origin;
         this.remark = remark;
+        this.imageBase64 = imageBase64;
         this.skus = skus;
     }
     public Commodity(int id, String name, String type, String detail, Date productionDate,
-                     String manufacturer, String origin, String remark) {
+                     String manufacturer, String origin, String remark, List<CommoditySKU> skus) {
+        this(id, name, type, detail, productionDate, manufacturer, origin, remark, null, skus);
+    }
+    public Commodity(int id, String name, String type, String detail, Date productionDate,
+                     String manufacturer, String origin, String remark, String imageBase64) {
         this.id = id;
         this.name = name;
         this.type = type;
@@ -35,9 +41,14 @@ public class Commodity {
         this.manufacturer = manufacturer;
         this.origin = origin;
         this.remark = remark;
+        this.imageBase64 = imageBase64;
+    }
+    public Commodity(int id, String name, String type, String detail, Date productionDate,
+                     String manufacturer, String origin, String remark) {
+        this(id, name, type, detail, productionDate, manufacturer, origin, remark, (List<CommoditySKU>) null);
     }
     public Commodity(String name, String type, String detail, Date productionDate,
-                     String manufacturer, String origin, String remark) {
+                     String manufacturer, String origin, String remark, String imageBase64) {
         this.name = name;
         this.type = type;
         this.detail = detail;
@@ -45,6 +56,11 @@ public class Commodity {
         this.manufacturer = manufacturer;
         this.origin = origin;
         this.remark = remark;
+        this.imageBase64 = imageBase64;
+    }
+    public Commodity(String name, String type, String detail, Date productionDate,
+                     String manufacturer, String origin, String remark) {
+        this(name, type, detail, productionDate, manufacturer, origin, remark, null);
     }
     // 无参构造方法
     public Commodity() {
@@ -82,6 +98,14 @@ public class Commodity {
 
     public void setDetail(String detail) {
         this.detail = detail;
+    }
+
+    public String getImageBase64() {
+        return imageBase64;
+    }
+
+    public void setImageBase64(String imageBase64) {
+        this.imageBase64 = imageBase64;
     }
 
     public Date getProductionDate() {
@@ -146,6 +170,7 @@ public class Commodity {
                 "id=" + id +
                 ", 名称='" + name + '\'' +
                 ", 类型='" + type + '\'' +
+                ", 图片长度=" + (imageBase64 == null ? 0 : imageBase64.length()) +
                 ",产品日期=" + productionDate +
                 ", 品牌='" + manufacturer + '\'' +
                 ", 总库存=" + (skus == null || skus.isEmpty() ? "null" :  getTotalStock ()    ) +

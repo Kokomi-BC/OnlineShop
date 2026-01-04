@@ -3,7 +3,9 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static src.CommodityJDBC.*;
 public class OrderJBDC {
@@ -309,6 +311,72 @@ public class OrderJBDC {
             }
         }
         return orders;
+    }
+
+    public static Map<String, Double> getCategoryAmountDistribution() {
+        String sql = "SELECT COALESCE(c.type, '未分类') AS category, " +
+                "SUM(od.quantity * od.price) AS total_amount " +
+                "FROM order_details od " +
+                "JOIN skus s ON od.skuid = s.skuid " +
+                "JOIN commodities c ON s.commodityid = c.id " +
+                "GROUP BY category " +
+                "ORDER BY total_amount DESC";
+        Map<String, Double> result = new LinkedHashMap<>();
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                String category = rs.getString("category");
+                double total = rs.getBigDecimal("total_amount").doubleValue();
+                result.put(category, total);
+            }
+        } catch (SQLException e) {
+            handleSQLException(e);
+        }
+        return result;
+    }
+
+    public static boolean deleteOrder(int orderId) {
+        String deleteDetailsSql = "DELETE FROM order_details WHERE orderid = ?";
+        String deleteOrderSql = "DELETE FROM orders WHERE orderid = ?";
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false);
+            try (PreparedStatement detailStmt = conn.prepareStatement(deleteDetailsSql)) {
+                detailStmt.setInt(1, orderId);
+                detailStmt.executeUpdate();
+            }
+            try (PreparedStatement orderStmt = conn.prepareStatement(deleteOrderSql)) {
+                orderStmt.setInt(1, orderId);
+                int affected = orderStmt.executeUpdate();
+                if (affected == 0) {
+                    conn.rollback();
+                    return false;
+                }
+            }
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            handleSQLException(e);
+            return false;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     public static Orderinfo getInfoByDetailId(int detailId) {

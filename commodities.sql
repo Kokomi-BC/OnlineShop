@@ -58,6 +58,7 @@ CREATE TABLE `commodities`  (
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '商品名称',
   `type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '商品类别',
   `detail` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '商品详情',
+  `image_base64` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '商品图片(base64)',
   `production_date` date NULL DEFAULT NULL COMMENT '生产日期',
   `manufacturer` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '生产商',
   `origin` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '产地',
@@ -68,11 +69,11 @@ CREATE TABLE `commodities`  (
 -- ----------------------------
 -- Records of commodities
 -- ----------------------------
-INSERT INTO `commodities` VALUES (39, 'PuraX', '数码产品', '阔型屏', '2025-05-20', '华为', '中国深圳', '');
-INSERT INTO `commodities` VALUES (40, '洗发水', '日用品', '无', '2024-05-19', 'xx工厂', '美国', '');
-INSERT INTO `commodities` VALUES (41, 'iPad Pro 2025', '数码产品', '无', '2025-05-21', 'Apple', '中国', '');
-INSERT INTO `commodities` VALUES (47, '智能手表', '数码产品', '无', '2025-05-23', '小米', '中国北京', '');
-INSERT INTO `commodities` VALUES (48, '连衣裙', '服装', '无', '2025-05-23', '未知制衣厂', '未知地区', '');
+INSERT INTO `commodities` VALUES (39, 'PuraX', '数码产品', '阔型屏', NULL, '2025-05-20', '华为', '中国深圳', '');
+INSERT INTO `commodities` VALUES (40, '洗发水', '日用品', '无', NULL, '2024-05-19', 'xx工厂', '美国', '');
+INSERT INTO `commodities` VALUES (41, 'iPad Pro 2025', '数码产品', '无', NULL, '2025-05-21', 'Apple', '中国', '');
+INSERT INTO `commodities` VALUES (47, '智能手表', '数码产品', '无', NULL, '2025-05-23', '小米', '中国北京', '');
+INSERT INTO `commodities` VALUES (48, '连衣裙', '服装', '无', NULL, '2025-05-23', '未知制衣厂', '未知地区', '');
 
 -- ----------------------------
 -- Table structure for order_details

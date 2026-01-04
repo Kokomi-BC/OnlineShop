@@ -32,6 +32,7 @@ public class Login extends JFrame {
     public Login() {
         initComponents();
         login.setVisible(true);
+        login.setResizable(false);
     }
     private void onLoginSuccess(User user) {
         System.out.println("登录成功，跳转到主界面");
@@ -122,6 +123,7 @@ public class Login extends JFrame {
         JDialog dialog = registerDialog.register;
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setVisible(true);
+        dialog.setResizable(false);
         login.setVisible(false);
         dialog.addWindowListener(new WindowAdapter() {
             @Override

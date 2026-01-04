@@ -103,28 +103,28 @@ public class register {
             label3.setFont(new Font("Microsoft YaHei UI", Font.PLAIN, 18));
             label3.setHorizontalAlignment(SwingConstants.CENTER);
             registerContentPane.add(label3);
-            label3.setBounds(75, 130, 60, 35);
+            label3.setBounds(85, 130, 60, 35);
 
             //---- label4 ----
             label4.setText("\u5bc6\u7801");
             label4.setFont(new Font("Microsoft YaHei UI", Font.PLAIN, 19));
             label4.setHorizontalAlignment(SwingConstants.CENTER);
             registerContentPane.add(label4);
-            label4.setBounds(85, 180, 50, 35);
+            label4.setBounds(95, 180, 50, 35);
 
             //---- label5 ----
             label5.setText("\u7535\u8bdd");
             label5.setFont(new Font("Microsoft YaHei UI", Font.PLAIN, 19));
             label5.setHorizontalAlignment(SwingConstants.CENTER);
             registerContentPane.add(label5);
-            label5.setBounds(85, 80, 50, 35);
+            label5.setBounds(95, 80, 50, 35);
 
             //---- label6 ----
             label6.setText("\u6536\u8d27\u5730\u5740\uff08\u53ef\u9009\uff09");
             label6.setFont(new Font("Microsoft YaHei UI", Font.PLAIN, 16));
             label6.setHorizontalAlignment(SwingConstants.CENTER);
             registerContentPane.add(label6);
-            label6.setBounds(10, 270, 145, 60);
+            label6.setBounds(20, 265, 145, 60);
 
             //---- label1 ----
             label1.setText("\u6ce8\u518c\u4f1a\u5458");
@@ -133,70 +133,70 @@ public class register {
             label1.setHorizontalAlignment(SwingConstants.CENTER);
             label1.setFont(label1.getFont().deriveFont(label1.getFont().getStyle() | Font.BOLD, label1.getFont().getSize() + 12f));
             registerContentPane.add(label1);
-            label1.setBounds(0, 10, 535, 55);
+            label1.setBounds(10, 10, 535, 55);
 
             //---- PhoneField ----
             PhoneField.setHorizontalAlignment(SwingConstants.LEFT);
             PhoneField.setForeground(Color.black);
             registerContentPane.add(PhoneField);
-            PhoneField.setBounds(145, 80, 260, 35);
+            PhoneField.setBounds(155, 80, 260, 35);
 
             //---- usernameField2 ----
             usernameField2.setHorizontalAlignment(SwingConstants.LEFT);
             usernameField2.setForeground(Color.black);
             registerContentPane.add(usernameField2);
-            usernameField2.setBounds(145, 130, 260, 35);
+            usernameField2.setBounds(155, 130, 260, 35);
 
             //---- textField ----
             textField.setHorizontalAlignment(SwingConstants.LEFT);
             textField.setForeground(Color.black);
             registerContentPane.add(textField);
-            textField.setBounds(145, 285, 260, 35);
+            textField.setBounds(155, 280, 260, 35);
 
             //---- passwordField ----
             passwordField.setHorizontalAlignment(SwingConstants.LEFT);
             registerContentPane.add(passwordField);
-            passwordField.setBounds(145, 180, 260, 35);
+            passwordField.setBounds(155, 180, 260, 35);
 
             //---- ok ----
             ok.setText("\u786e\u5b9a");
             ok.setForeground(Color.black);
             ok.addActionListener(e -> ok(e));
             registerContentPane.add(ok);
-            ok.setBounds(145, 420, 85, 35);
+            ok.setBounds(155, 420, 85, 35);
 
             //---- cancel ----
             cancel.setText("\u53d6\u6d88");
             cancel.setForeground(Color.black);
             cancel.addActionListener(e -> cancel(e));
             registerContentPane.add(cancel);
-            cancel.setBounds(310, 420, 85, 35);
+            cancel.setBounds(320, 420, 85, 35);
 
             //---- passwordField2 ----
             passwordField2.setHorizontalAlignment(SwingConstants.LEFT);
             registerContentPane.add(passwordField2);
-            passwordField2.setBounds(145, 235, 260, 35);
+            passwordField2.setBounds(155, 230, 260, 35);
 
             //---- label7 ----
             label7.setText("\u786e\u8ba4\u5bc6\u7801");
             label7.setFont(new Font("Microsoft YaHei UI", Font.PLAIN, 19));
             label7.setHorizontalAlignment(SwingConstants.CENTER);
             registerContentPane.add(label7);
-            label7.setBounds(35, 235, 100, 35);
+            label7.setBounds(50, 230, 100, 35);
             registerContentPane.add(vcode);
-            vcode.setBounds(150, 340, 94, 40);
+            vcode.setBounds(160, 340, 94, 40);
 
             //---- label8 ----
             label8.setText("\u9a8c\u8bc1\u7801");
             label8.setFont(new Font("Microsoft YaHei UI", Font.PLAIN, 19));
             label8.setHorizontalAlignment(SwingConstants.CENTER);
             registerContentPane.add(label8);
-            label8.setBounds(65, 345, 75, 35);
+            label8.setBounds(75, 345, 75, 35);
 
             //---- jt_code ----
             jt_code.setHorizontalAlignment(SwingConstants.LEFT);
             registerContentPane.add(jt_code);
-            jt_code.setBounds(255, 340, 150, 40);
+            jt_code.setBounds(265, 340, 150, 40);
 
             {
                 // compute preferred size

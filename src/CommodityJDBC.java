@@ -34,9 +34,9 @@ public class CommodityJDBC {
                 }
             }
             int commodityId;
-            try (PreparedStatement pstmt = conn.prepareStatement(
-                    "INSERT INTO commodities (name, type, detail, production_date, manufacturer, origin, remark) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                try (PreparedStatement pstmt = conn.prepareStatement(
+                    "INSERT INTO commodities (name, type, detail, image_base64, production_date, manufacturer, origin, remark) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS)) {
                 setCommodityParameter(pstmt, commodity);
                 pstmt.executeUpdate();
@@ -78,6 +78,7 @@ public class CommodityJDBC {
                     commodity.setName(rs.getString("name"));
                     commodity.setType(rs.getString("type"));
                     commodity.setDetail(rs.getString("detail"));
+                    commodity.setImageBase64(rs.getString("image_base64"));
                     commodity.setProductionDate(rs.getDate("production_date"));
                     commodity.setManufacturer(rs.getString("manufacturer"));
                     commodity.setOrigin(rs.getString("origin"));
@@ -188,6 +189,7 @@ public class CommodityJDBC {
                         c.setName(rs.getString("name"));
                         c.setType(rs.getString("type"));
                         c.setDetail(rs.getString("detail"));
+                        c.setImageBase64(rs.getString("image_base64"));
                         c.setProductionDate(rs.getDate("production_date"));
                         c.setManufacturer(rs.getString("manufacturer"));
                         c.setOrigin(rs.getString("origin"));
@@ -255,6 +257,7 @@ public class CommodityJDBC {
                             c.setName(rs.getString("name"));
                         c.setType(rs.getString("type"));
                         c.setDetail(rs.getString("detail"));
+                        c.setImageBase64(rs.getString("image_base64"));
                         c.setProductionDate(rs.getDate("production_date"));
                         c.setManufacturer(rs.getString("manufacturer"));
                         c.setOrigin(rs.getString("origin"));
@@ -297,14 +300,15 @@ public class CommodityJDBC {
         pstmt.setString(1, c.getName());
         pstmt.setString(2, c.getType());
         pstmt.setString(3, c.getDetail());
+        pstmt.setString(4, c.getImageBase64());
         if (c.getProductionDate() != null) {
-            pstmt.setDate(4, new java.sql.Date(c.getProductionDate().getTime()));
+            pstmt.setDate(5, new java.sql.Date(c.getProductionDate().getTime()));
         } else {
-            pstmt.setNull(4, Types.DATE);
+            pstmt.setNull(5, Types.DATE);
         }
-        pstmt.setString(5, c.getManufacturer());
-        pstmt.setString(6, c.getOrigin());
-        pstmt.setString(7, c.getRemark());
+        pstmt.setString(6, c.getManufacturer());
+        pstmt.setString(7, c.getOrigin());
+        pstmt.setString(8, c.getRemark());
     }
 
     private static boolean commodityExists(Connection conn, String name) throws SQLException {
@@ -416,9 +420,9 @@ public class CommodityJDBC {
                 return false;
             }
             try (PreparedStatement pstmt = conn.prepareStatement(
-                    "UPDATE commodities SET name=?, type=?, detail=?, production_date=?, manufacturer=?, origin=?, remark=? WHERE id=?")) {
+                    "UPDATE commodities SET name=?, type=?, detail=?, image_base64=?, production_date=?, manufacturer=?, origin=?, remark=? WHERE id=?")) {
                 setCommodityParameter2(pstmt, commodity);
-                pstmt.setInt(8, commodityId);
+                pstmt.setInt(9, commodityId);
                 int affectedRows = pstmt.executeUpdate();
                 if (affectedRows == 0) {
                     throw new SQLException("更新商品失败，未影响任何行");
@@ -438,14 +442,15 @@ public class CommodityJDBC {
         pstmt.setString(1, c.getName());
         pstmt.setString(2, c.getType());
         pstmt.setString(3, c.getDetail());
+        pstmt.setString(4, c.getImageBase64());
         if (c.getProductionDate() != null) {
-            pstmt.setDate(4, new java.sql.Date(c.getProductionDate().getTime()));
+            pstmt.setDate(5, new java.sql.Date(c.getProductionDate().getTime()));
         } else {
-            pstmt.setNull(4, Types.DATE);
+            pstmt.setNull(5, Types.DATE);
         }
-        pstmt.setString(5, c.getManufacturer());
-        pstmt.setString(6, c.getOrigin());
-        pstmt.setString(7, c.getRemark());
+        pstmt.setString(6, c.getManufacturer());
+        pstmt.setString(7, c.getOrigin());
+        pstmt.setString(8, c.getRemark());
     }
     public static boolean deleteCommodity(int commodityId) {
         Connection conn = null;

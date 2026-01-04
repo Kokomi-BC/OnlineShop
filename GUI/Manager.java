@@ -9,18 +9,32 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
+import javax.imageio.ImageIO;
+import javax.imageio.IIOImage;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.ArrayList;
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
+import java.util.Iterator;
 import java.util.regex.Pattern;
 
 
@@ -33,6 +47,9 @@ public class Manager extends JFrame {
     private static final String PRODUCT_MANAGE = "ProductManagement"; // 商品管理卡片标识
     private static final String ORDER_MANAGE = "OrderManagement";     // 订单管理卡片标识
     private static final String USER_MANAGE = "UserManagement";       // 用户管理卡片标识
+    private static final String STATS_MANAGE = "StatsManagement";     // 数据统计卡片标识
+    private PieChartPanel categoryPieChart;
+    private JLabel statsUpdateLabel;
     private static User currentUser;
     public Manager(User user) {
         currentUser = user;
@@ -45,6 +62,7 @@ public class Manager extends JFrame {
         mainPanel.add(createProductManagementPanel(), PRODUCT_MANAGE);  // 商品管理
         mainPanel.add(createOrderManagementPanel(), ORDER_MANAGE);      // 订单管理
         mainPanel.add(createUserManagementPanel(), USER_MANAGE);        // 用户管理
+        mainPanel.add(createStatisticsPanel(), STATS_MANAGE);           // 数据统计
         JPanel navigationPanel = createNavigationPanel();
         setLayout(new BorderLayout());
         add(navigationPanel, BorderLayout.NORTH);
@@ -56,7 +74,7 @@ public class Manager extends JFrame {
         navPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
-        String[] buttons = {"商品管理", "订单管理", "用户管理"};
+        String[] buttons = {"商品管理", "订单管理", "用户管理", "数据统计"};
 
         for (String text : buttons) {
             JButton btn = getJButton(text);
@@ -81,6 +99,9 @@ public class Manager extends JFrame {
                     break;
                 case "用户管理":
                     cardLayout.show(mainPanel, USER_MANAGE);
+                    break;
+                case "数据统计":
+                    cardLayout.show(mainPanel, STATS_MANAGE);
                     break;
             }
         });
@@ -175,12 +196,35 @@ public class Manager extends JFrame {
         addFormRow(formPanel, "商品详情：", detailScroll);
         JTextField remarkField = new JTextField();
         addFormRow(formPanel, "备注：", remarkField);
+        JLabel imagePreview = createImagePreviewLabel();
+        JPanel imagePanel = new JPanel(new BorderLayout(5, 5));
+        imagePanel.add(imagePreview, BorderLayout.CENTER);
+        JButton uploadBtn = new JButton("上传图片");
+        JButton clearBtn = new JButton("移除图片");
+        JPanel imageBtnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        imageBtnPanel.add(uploadBtn);
+        imageBtnPanel.add(clearBtn);
+        imagePanel.add(imageBtnPanel, BorderLayout.SOUTH);
+        addFormRow(formPanel, "商品图片：", imagePanel);
+
+        final String[] imageBase64Holder = {null};
+        uploadBtn.addActionListener(_ -> {
+            String encoded = pickAndEncodeImage(dialog);
+            if (encoded != null) {
+                imageBase64Holder[0] = encoded;
+                setPreviewImage(imagePreview, encoded);
+            }
+        });
+        clearBtn.addActionListener(_ -> {
+            imageBase64Holder[0] = null;
+            setPreviewImage(imagePreview, null);
+        });
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         JButton confirmButton = new JButton("确认");
         JButton cancelButton = new JButton("取消");
         confirmButton.addActionListener(_ -> handleFormSubmission(
                 dialog, nameField, typeCombo, dateSpinner,
-                manufacturerField, originField, detailArea, remarkField
+                manufacturerField, originField, detailArea, remarkField, imageBase64Holder[0]
         ));
         cancelButton.addActionListener(_ -> dialog.dispose());
         buttonPanel.add(cancelButton);
@@ -208,7 +252,8 @@ public class Manager extends JFrame {
                                       JTextField manufacturerField,
                                       JTextField originField,
                                       JTextArea detailArea,
-                                      JTextField remarkField) {
+                                      JTextField remarkField,
+                                      String imageBase64) {
         Commodity commodity = new Commodity();
         commodity.setName(nameField.getText().trim());
         commodity.setType((String)typeCombo.getSelectedItem());
@@ -217,6 +262,7 @@ public class Manager extends JFrame {
         commodity.setOrigin(originField.getText().trim());
         commodity.setDetail(detailArea.getText().trim());
         commodity.setRemark(remarkField.getText().trim());
+        commodity.setImageBase64(imageBase64);
         if (commodity.getName().isEmpty()) {
             showError("商品名称不能为空");
             return;
@@ -457,31 +503,55 @@ public class Manager extends JFrame {
                 showCommodityDetails(original.getId());
             }
         });
-        dialog.setSize(500, 400);
         dialog.setLayout(new BorderLayout(10, 10));
-        JPanel formPanel = new JPanel(new GridLayout(0, 2, 10, 10));
+        JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 8, 6, 8);
+        gbc.anchor = GridBagConstraints.LINE_START;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+
+        int row = 0;
         JTextField nameField = new JTextField();
-        addFormRow(formPanel, "商品名称：", nameField);
+        addFieldRow(formPanel, gbc, row++, "商品名称：", nameField, 0);
+
         JComboBox<String> typeCombo = new JComboBox<>(new String[]{"日用品","平板","手机" ,"电脑","数码产品", "服装", "药品","家具"});
         typeCombo.setEditable(true);
-        addFormRow(formPanel, "商品类型：", typeCombo);
-        JPanel datePanel = new JPanel(new BorderLayout());
+        addFieldRow(formPanel, gbc, row++, "商品类型：", typeCombo, 0);
+
         JSpinner dateSpinner = new JSpinner(new SpinnerDateModel());
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd");
         dateSpinner.setEditor(dateEditor);
         dateSpinner.setValue(new Date());
-        datePanel.add(dateSpinner);
-        addFormRow(formPanel, "发布日期：", datePanel);
+        addFieldRow(formPanel, gbc, row++, "发布日期：", dateSpinner, 0);
+
         JTextField manufacturerField = new JTextField();
-        addFormRow(formPanel, "生产厂家：", manufacturerField);
+        addFieldRow(formPanel, gbc, row++, "生产厂家：", manufacturerField, 0);
+
         JTextField originField = new JTextField();
-        addFormRow(formPanel, "商品产地：", originField);
-        JTextArea detailArea = new JTextArea(3, 20);
-        JTextField detailScroll = new JTextField();
-        addFormRow(formPanel, "商品详情：", detailScroll);
+        addFieldRow(formPanel, gbc, row++, "商品产地：", originField, 0);
+
+        JTextArea detailArea = new JTextArea(4, 20);
+        detailArea.setLineWrap(true);
+        detailArea.setWrapStyleWord(true);
+        JScrollPane detailScroll = new JScrollPane(detailArea);
+        detailScroll.setPreferredSize(new Dimension(280, 100));
+        addFieldRow(formPanel, gbc, row++, "商品详情：", detailScroll, 0.4);
+
         JTextField remarkField = new JTextField();
-        addFormRow(formPanel, "备注：", remarkField);
+        addFieldRow(formPanel, gbc, row++, "备注：", remarkField, 0);
+
+        JLabel imagePreview = createImagePreviewLabel();
+        JPanel imagePanel = new JPanel(new BorderLayout(5, 5));
+        imagePanel.add(imagePreview, BorderLayout.CENTER);
+        JButton uploadBtn = new JButton("上传图片");
+        JButton clearBtn = new JButton("移除图片");
+        JPanel imageBtnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        imageBtnPanel.add(uploadBtn);
+        imageBtnPanel.add(clearBtn);
+        imagePanel.add(imageBtnPanel, BorderLayout.SOUTH);
+        addFieldRow(formPanel, gbc, row, "商品图片：", imagePanel, 0);
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         JButton confirmButton =new JButton("确认");
         JButton cancelButton = new JButton("取消");
@@ -492,6 +562,19 @@ public class Manager extends JFrame {
         originField.setText(original.getOrigin());
         detailArea.setText(original.getDetail());
         remarkField.setText(original.getRemark());
+        final String[] imageBase64Holder = {original.getImageBase64()};
+        setPreviewImage(imagePreview, imageBase64Holder[0]);
+        uploadBtn.addActionListener(_ -> {
+            String encoded = pickAndEncodeImage(dialog);
+            if (encoded != null) {
+                imageBase64Holder[0] = encoded;
+                setPreviewImage(imagePreview, encoded);
+            }
+        });
+        clearBtn.addActionListener(_ -> {
+            imageBase64Holder[0] = null;
+            setPreviewImage(imagePreview, null);
+        });
         cancelButton.addActionListener(_ -> dialog.dispose());
         confirmButton.addActionListener(_ -> {
             Commodity updated = buildCommodityFromFields(
@@ -502,7 +585,8 @@ public class Manager extends JFrame {
                     manufacturerField,
                     originField,
                     detailArea,
-                    remarkField
+                    remarkField,
+                    imageBase64Holder[0]
             );
             if (updated == null) return;
             if (CommodityJDBC.updateCommodity(original.getId(), updated)) {
@@ -516,15 +600,37 @@ public class Manager extends JFrame {
         buttonPanel.add(confirmButton);
         dialog.add(formPanel, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.setMinimumSize(new Dimension(620, 520));
         dialog.pack();
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
     }
 
+    private void addFieldRow(JPanel panel, GridBagConstraints template, int row, String labelText, JComponent field, double weightY) {
+        GridBagConstraints labelGbc = (GridBagConstraints) template.clone();
+        labelGbc.gridx = 0;
+        labelGbc.gridy = row;
+        labelGbc.weightx = 0;
+        labelGbc.weighty = 0;
+        labelGbc.fill = GridBagConstraints.NONE;
+        labelGbc.anchor = GridBagConstraints.LINE_END;
+
+        GridBagConstraints fieldGbc = (GridBagConstraints) template.clone();
+        fieldGbc.gridx = 1;
+        fieldGbc.gridy = row;
+        fieldGbc.weightx = 1.0;
+        fieldGbc.weighty = weightY;
+        fieldGbc.fill = weightY > 0 ? GridBagConstraints.BOTH : GridBagConstraints.HORIZONTAL;
+        fieldGbc.anchor = GridBagConstraints.LINE_START;
+
+        panel.add(new JLabel(labelText), labelGbc);
+        panel.add(field, fieldGbc);
+    }
+
     private Commodity buildCommodityFromFields(int id, JTextField nameField, JComboBox<String> typeCombo,
                                                JSpinner dateSpinner, JTextField manufacturerField,
                                                JTextField originField, JTextArea detailArea,
-                                               JTextField remarkField) {
+                                               JTextField remarkField, String imageBase64) {
         if (nameField.getText().trim().isEmpty()) {
             showError("商品名称不能为空");
             nameField.requestFocus();
@@ -539,6 +645,7 @@ public class Manager extends JFrame {
         commodity.setOrigin(originField.getText().trim());
         commodity.setDetail(detailArea.getText().trim());
         commodity.setRemark(remarkField.getText().trim());
+        commodity.setImageBase64(imageBase64);
         return commodity;
     }
 
@@ -575,7 +682,7 @@ public class Manager extends JFrame {
         JDialog dialog = new JDialog(this, "商品详情", true);
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        JPanel infoPanel = createInfoPanel(commodity);
+        JPanel infoPanel = createInfoPanel(commodity, dialog);
         mainPanel.add(infoPanel, BorderLayout.NORTH);
         SkuTableModel tableModel = new SkuTableModel();
         JTable skuTable = new JTable(tableModel);
@@ -590,7 +697,28 @@ public class Manager extends JFrame {
         dialog.setVisible(true);
     }
 
-    private JPanel createInfoPanel(Commodity commodity) {
+    private JPanel createInfoPanel(Commodity commodity, JDialog parentDialog) {
+        JPanel wrapper = new JPanel(new BorderLayout(10, 10));
+        JLabel imgLabel = createImagePreviewLabel();
+        setPreviewImage(imgLabel, commodity.getImageBase64());
+        imgLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        imgLabel.setToolTipText("点击上传或替换图片");
+        imgLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                String encoded = pickAndEncodeImage(parentDialog);
+                if (encoded == null) return;
+                commodity.setImageBase64(encoded);
+                if (CommodityJDBC.updateCommodity(commodity.getId(), commodity)) {
+                    setPreviewImage(imgLabel, encoded);
+                    JOptionPane.showMessageDialog(parentDialog, "图片已更新", "提示", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(parentDialog, "更新图片失败", "错误", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        wrapper.add(imgLabel, BorderLayout.WEST);
+
         JPanel infoPanel = new JPanel(new GridLayout(0, 2, 10, 5));
         addInfoRow(infoPanel, "商品名称：", commodity.getName());
         addInfoRow(infoPanel, "商品类型：", commodity.getType());
@@ -601,7 +729,9 @@ public class Manager extends JFrame {
         detailArea.setEditable(false);
         detailArea.setLineWrap(true);
         detailArea.setWrapStyleWord(true);
-        return infoPanel;
+        wrapper.add(infoPanel, BorderLayout.CENTER);
+        wrapper.add(new JScrollPane(detailArea), BorderLayout.SOUTH);
+        return wrapper;
     }
 
     private JPanel createButtonPanel(JDialog parent, JTable skuTable, int commodityId, SkuTableModel tableModel) {
@@ -807,6 +937,144 @@ public class Manager extends JFrame {
         JOptionPane.showMessageDialog(null, message, "输入错误", JOptionPane.ERROR_MESSAGE);
     }
 
+    private JLabel createImagePreviewLabel() {
+        JLabel label = new JLabel("无图", SwingConstants.CENTER);
+        label.setPreferredSize(new Dimension(140, 140));
+        label.setBorder(BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor")));
+        return label;
+    }
+
+    private void setPreviewImage(JLabel label, String base64) {
+        if (base64 == null || base64.isEmpty()) {
+            label.setIcon(null);
+            label.setText("无图");
+            return;
+        }
+        ImageIcon icon = decodeBase64ToIcon(base64, 140, 140);
+        if (icon != null) {
+            label.setIcon(icon);
+            label.setText("");
+        } else {
+            label.setIcon(null);
+            label.setText("无效图片");
+        }
+    }
+
+    private ImageIcon decodeBase64ToIcon(String base64, int width, int height) {
+        try {
+            byte[] bytes = Base64.getDecoder().decode(base64);
+            BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
+            if (img == null) return null;
+            Image scaled = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+            return new ImageIcon(scaled);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String pickAndEncodeImage(Component parent) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("选择商品图片");
+        int result = chooser.showOpenDialog(parent);
+        if (result != JFileChooser.APPROVE_OPTION) {
+            return null;
+        }
+        File file = chooser.getSelectedFile();
+        try {
+            BufferedImage image = ImageIO.read(file);
+            if (image == null) {
+                showError("不支持的图片格式");
+                return null;
+            }
+            String encoded = encodeWithCompression(image, 500 * 1024); // 压缩至 500KB 内
+            if (encoded == null) {
+                showError("图片压缩失败");
+            }
+            return encoded;
+        } catch (Exception e) {
+            showError("读取图片失败: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private String encodeWithCompression(BufferedImage image, long maxBytes) {
+        try {
+            BufferedImage working = ensureRgb(image);
+            float quality = 0.85f;
+            int width = working.getWidth();
+            int height = working.getHeight();
+
+            for (int i = 0; i < 12; i++) {
+                byte[] data = toJpegBytes(working, quality);
+                if (data == null) return null;
+                if (data.length <= maxBytes) {
+                    return Base64.getEncoder().encodeToString(data);
+                }
+
+                if (quality > 0.35f) {
+                    quality -= 0.1f;
+                    continue;
+                }
+
+                if (width > 400 && height > 400) {
+                    width = Math.max(360, (int) (width * 0.85));
+                    height = Math.max(360, (int) (height * 0.85));
+                    working = scaleImage(working, width, height);
+                    quality = 0.8f;
+                    continue;
+                }
+            }
+
+            byte[] fallback = toJpegBytes(working, 0.35f);
+            return fallback != null ? Base64.getEncoder().encodeToString(fallback) : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private BufferedImage ensureRgb(BufferedImage src) {
+        if (!src.getColorModel().hasAlpha()) {
+            return src;
+        }
+        BufferedImage rgbImage = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = rgbImage.createGraphics();
+        g2d.setColor(Color.WHITE);
+        g2d.fillRect(0, 0, src.getWidth(), src.getHeight());
+        g2d.drawImage(src, 0, 0, null);
+        g2d.dispose();
+        return rgbImage;
+    }
+
+    private BufferedImage scaleImage(BufferedImage src, int targetWidth, int targetHeight) {
+        BufferedImage resized = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = resized.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2d.drawImage(src, 0, 0, targetWidth, targetHeight, null);
+        g2d.dispose();
+        return resized;
+    }
+
+    private byte[] toJpegBytes(BufferedImage image, float quality) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+            if (!writers.hasNext()) return null;
+            ImageWriter writer = writers.next();
+            ImageWriteParam param = writer.getDefaultWriteParam();
+            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionQuality(quality);
+            try (ImageOutputStream ios = ImageIO.createImageOutputStream(baos)) {
+                writer.setOutput(ios);
+                writer.write(null, new IIOImage(image, null, null), param);
+            } finally {
+                writer.dispose();
+            }
+            return baos.toByteArray();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // ======================= 订单管理面板 =======================
     private JPanel createOrderManagementPanel() {
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -821,6 +1089,7 @@ public class Manager extends JFrame {
         JTable table = new JTable(model);
         table.setRowHeight(30);
         table.setAutoCreateRowSorter(true);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -832,9 +1101,32 @@ public class Manager extends JFrame {
             }
         });
         JButton refreshButton = new JButton("刷新");
+        JButton deleteButton = new JButton("删除订单");
         refreshButton.addActionListener(_ -> refreshOrderTable(model));
+        deleteButton.addActionListener(_ -> {
+            int row = table.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(this, "请先选择一个订单", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int modelRow = table.convertRowIndexToModel(row);
+            int orderId = (int) table.getModel().getValueAt(modelRow, 0);
+            int choice = JOptionPane.showConfirmDialog(this,
+                    "确认删除订单 " + orderId + " ?", "删除确认",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (choice == JOptionPane.YES_OPTION) {
+                boolean success = OrderJBDC.deleteOrder(orderId);
+                if (success) {
+                    refreshOrderTable(model);
+                    JOptionPane.showMessageDialog(this, "订单已删除");
+                } else {
+                    JOptionPane.showMessageDialog(this, "删除失败，订单可能不存在", "错误", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(refreshButton);
+        buttonPanel.add(deleteButton);
         refreshOrderTable(model);
         mainPanel.add(buttonPanel, BorderLayout.NORTH);
         mainPanel.add(new JScrollPane(table), BorderLayout.CENTER);
@@ -1016,6 +1308,50 @@ public class Manager extends JFrame {
         dialog.add(mainPanel);
         dialog.setLocationRelativeTo(null);
         dialog.setVisible(true);
+    }
+
+    // ======================= 数据统计面板 =======================
+    private JPanel createStatisticsPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JButton refreshBtn = new JButton("刷新统计");
+        statsUpdateLabel = new JLabel("更新中...");
+        header.add(refreshBtn);
+        header.add(statsUpdateLabel);
+        panel.add(header, BorderLayout.NORTH);
+
+        categoryPieChart = new PieChartPanel();
+        categoryPieChart.setPreferredSize(new Dimension(500, 480));
+        panel.add(categoryPieChart, BorderLayout.CENTER);
+
+        refreshBtn.addActionListener(_ -> loadStatisticsData());
+        loadStatisticsData();
+        return panel;
+    }
+
+    private void loadStatisticsData() {
+        statsUpdateLabel.setText("更新中...");
+        new SwingWorker<Map<String, Double>, Void>() {
+            @Override
+            protected Map<String, Double> doInBackground() {
+                return OrderJBDC.getCategoryAmountDistribution();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Map<String, Double> data = get();
+                    categoryPieChart.setData(data);
+                    String ts = DateTimeFormatter.ofPattern("HH:mm:ss").format(LocalTime.now());
+                    statsUpdateLabel.setText("更新于 " + ts);
+                } catch (Exception e) {
+                    statsUpdateLabel.setText("加载失败");
+                    JOptionPane.showMessageDialog(Manager.this, "加载统计数据失败", "错误", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }.execute();
     }
 
     // ======================= 用户管理面板 =======================
@@ -1298,6 +1634,101 @@ public class Manager extends JFrame {
             JOptionPane.showMessageDialog(this, result);
         }
     }
+
+    private static class PieChartPanel extends JPanel {
+        private Map<String, Double> data = new LinkedHashMap<>();
+        private final Color[] palette = new Color[]{
+                new Color(0x4E79A7), new Color(0xF28E2B), new Color(0xE15759),
+                new Color(0x76B7B2), new Color(0x59A14F), new Color(0xEDC948),
+                new Color(0xB07AA1), new Color(0xFF9DA7)
+        };
+
+        public void setData(Map<String, Double> data) {
+            if (data == null || data.isEmpty()) {
+                this.data = new LinkedHashMap<>();
+            } else {
+                this.data = new LinkedHashMap<>(data);
+            }
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            if (data.isEmpty()) {
+                drawEmptyState(g2);
+                g2.dispose();
+                return;
+            }
+
+            double total = data.values().stream().mapToDouble(Double::doubleValue).sum();
+            if (total <= 0) {
+                drawEmptyState(g2);
+                g2.dispose();
+                return;
+            }
+
+            int diameter = Math.min(getWidth(), getHeight()) - 180;
+            diameter = Math.max(diameter, 160);
+            int x = (getWidth() - diameter) / 2;
+            int y = (getHeight() - diameter) / 2 - 20;
+
+            int startAngle = 90;
+            int index = 0;
+            int legendX = x + diameter + 20;
+            int legendY = y;
+            double consumedAngle = 0;
+            int entryCount = data.size();
+
+            for (Map.Entry<String, Double> entry : data.entrySet()) {
+                double ratio = entry.getValue() / total;
+                int angle = (int) Math.round(ratio * 360);
+                if (index == entryCount - 1) {
+                    angle = 360 - (int) Math.round(consumedAngle);
+                }
+
+                Color color = palette[index % palette.length];
+                g2.setColor(color);
+                g2.fillArc(x, y, diameter, diameter, startAngle, -angle);
+
+                double midAngle = startAngle - angle / 2.0;
+                double radians = Math.toRadians(midAngle);
+                int labelRadius = diameter / 2 + 10;
+                int labelX = x + diameter / 2 + (int) (Math.cos(radians) * labelRadius);
+                int labelY = y + diameter / 2 - (int) (Math.sin(radians) * labelRadius);
+                String percentText = String.format("%.1f%%", ratio * 100);
+                g2.setColor(Color.DARK_GRAY);
+                g2.drawString(percentText, labelX - g2.getFontMetrics().stringWidth(percentText) / 2, labelY);
+
+                // legend
+                g2.setColor(color);
+                g2.fillRoundRect(legendX, legendY, 16, 16, 4, 4);
+                g2.setColor(Color.DARK_GRAY);
+                String legendText = entry.getKey();
+                g2.drawString(legendText, legendX + 24, legendY + 13);
+                legendY += 24;
+
+                startAngle -= angle;
+                consumedAngle += angle;
+                index++;
+            }
+
+            g2.dispose();
+        }
+
+        private void drawEmptyState(Graphics2D g2) {
+            String msg = "暂无数据";
+            FontMetrics fm = g2.getFontMetrics();
+            int x = (getWidth() - fm.stringWidth(msg)) / 2;
+            int y = getHeight() / 2;
+            g2.setColor(new Color(120, 120, 120));
+            g2.drawString(msg, x, y);
+        }
+    }
+
     public static void main() {
         SwingUtilities.invokeLater(() -> {
             FlatMTMaterialLighterIJTheme.setup();

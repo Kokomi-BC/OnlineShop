@@ -10,15 +10,19 @@ import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.AbstractTableModel;
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Base64;
 import java.util.List;
+import java.io.ByteArrayInputStream;
 
 import static src.CartJDBC.deleteCartItem;
 import static src.OrderJBDC.getTotalQuantityByUserId;
@@ -345,19 +349,29 @@ public class Mainview extends JFrame {
             JOptionPane.showMessageDialog(this, "该商品没有可用的SKU", "错误", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        JPanel detailsPanel = new JPanel(new BorderLayout(10, 10));
+        JPanel detailsPanel = new JPanel(new BorderLayout(12, 10));
         detailsPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        JLabel imageLabel = createImagePreviewLabel(160, 160);
+        updatePreviewImage(commodity.getImageBase64(), imageLabel);
+
+        JPanel contentPanel = new JPanel(new BorderLayout(10, 8));
         JPanel infoPanel = new JPanel(new GridLayout(0, 2, 10, 5));
         addInfoRow(infoPanel, "商品名称：", commodity.getName());
         addInfoRow(infoPanel, "商品类型：", commodity.getType());
         addInfoRow(infoPanel, "生产日期：", String.valueOf(commodity.getProductionDate()));
         addInfoRow(infoPanel, "制造商：", commodity.getManufacturer());
+
         JTextArea detailArea = new JTextArea(commodity.getDetail());
         detailArea.setEditable(false);
         detailArea.setLineWrap(true);
         detailArea.setWrapStyleWord(true);
-        detailsPanel.add(infoPanel, BorderLayout.NORTH);
-        detailsPanel.add(new JScrollPane(detailArea), BorderLayout.CENTER);
+
+        contentPanel.add(infoPanel, BorderLayout.NORTH);
+        contentPanel.add(new JScrollPane(detailArea), BorderLayout.CENTER);
+
+        detailsPanel.add(imageLabel, BorderLayout.WEST);
+        detailsPanel.add(contentPanel, BorderLayout.CENTER);
         JDialog dialog = new JDialog(this, "商品详情", true);
         detailsPanel.add(createSkuPanel(skuDetails, dialog), BorderLayout.SOUTH);
         dialog.setContentPane(detailsPanel);
@@ -380,6 +394,42 @@ public class Mainview extends JFrame {
             panel.add(skuButton);
         }
         return new JScrollPane(panel);
+    }
+    
+    private JLabel createImagePreviewLabel(int width, int height) {
+        JLabel imageLabel = new JLabel("无图片", SwingConstants.CENTER);
+        imageLabel.setPreferredSize(new Dimension(width, height));
+        imageLabel.setBorder(BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor"))); 
+        imageLabel.setOpaque(true);
+        imageLabel.setBackground(Color.WHITE);
+        return imageLabel;
+    }
+    
+    private void updatePreviewImage(String base64, JLabel imageLabel) {
+        if (base64 == null || base64.isEmpty()) {
+            imageLabel.setIcon(null);
+            imageLabel.setText("无图片");
+            return;
+        }
+        BufferedImage image = decodeBase64ToImage(base64);
+        if (image == null) {
+            imageLabel.setIcon(null);
+            imageLabel.setText("无法加载图片");
+            return;
+        }
+        Dimension size = imageLabel.getPreferredSize();
+        Image scaledImage = image.getScaledInstance(size.width, size.height, Image.SCALE_SMOOTH);
+        imageLabel.setIcon(new ImageIcon(scaledImage));
+        imageLabel.setText(null);
+    }
+    
+    private BufferedImage decodeBase64ToImage(String base64) {
+        try {
+            byte[] imageBytes = Base64.getDecoder().decode(base64);
+            return ImageIO.read(new ByteArrayInputStream(imageBytes));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void handleAddToCart(CommoditySKU sku, JDialog dialogToClose) {
